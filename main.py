@@ -6,7 +6,7 @@ import os
 import mysql.connector
 import matplotlib.pyplot as plt
 
-bdsql = mysql.connector.connect(host="localhost", user="root", password="@Pedrinho1", database="safecommerce")
+bdsql = mysql.connector.connect(host="localhost", user="aluno", password="sptech", database="safecommerce")
 
 mycursor = bdsql.cursor()
 
