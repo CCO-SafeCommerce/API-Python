@@ -1,96 +1,162 @@
 CREATE DATABASE safecommerce;
+
 USE safecommerce;
 
-CREATE TABLE empresa (
-	idEmpresa INT PRIMARY KEY AUTO_INCREMENT,
-    nomeEmpresa VARCHAR(45),
-    emailEmpresa VARCHAR(45),
-    senhaEmpresa VARCHAR(45),
-    cnpj CHAR(18)
+create table Empresa(
+	idEmpresa int primary key auto_increment,
+    nome varchar(45),
+    cnpj char(14)
 );
 
-CREATE TABLE usuario (
-	idUsuario INT PRIMARY KEY AUTO_INCREMENT,
-    nomeUser VARCHAR(45),
-    emailUser VARCHAR(45),
-    senhaUser VARCHAR(45), 
-    fkEmpresa INT,
-    FOREIGN KEY(fkEmpresa) REFERENCES empresa(idEmpresa)
+create table Usuario(
+	idUsuario int primary key auto_increment,
+    nome varchar(45),
+	email varchar(45),
+	senha varchar(65),
+	fkUsuario int,
+    foreign key (fkUsuario) references Usuario(idUsuario),
+    fkEmpresa int,
+    foreign key (fkEmpresa) references Empresa(idEmpresa)
 );
 
-CREATE TABLE servidor (
-	idServidor INT PRIMARY KEY AUTO_INCREMENT,
-    modelo VARCHAR(45),
-    so VARCHAR(45),
-    qtd_cpus INT,
-    qtd_memoria_ram INT,
-    qtd_disco INT,
-    fkEmpresa INT,
-    FOREIGN KEY(fkEmpresa) REFERENCES empresa(idEmpresa)
+create table Servidor(
+	idServidor int primary key auto_increment,
+    modelo varchar(45),
+	so varchar(45),
+    enderecoMac varchar(17),
+    fkEmpresa int,
+    foreign key (fkEmpresa) references Empresa(idEmpresa)
 );
 
-CREATE TABLE processo(
-	id INT PRIMARY KEY AUTO_INCREMENT
-    ,nome VARCHAR(40)
-    ,porcentagemCpu DECIMAL(5,2)
-    ,fkServidor INT
-    ,FOREIGN KEY (fkServidor) REFERENCES servidor(idServidor)
-	,horario DATETIME
+create table Metrica(
+	idMetrica int primary key auto_increment,
+    nome varchar(45),
+    unidadeMedida varchar(45)
 );
 
-CREATE TABLE ram(
-	id INT PRIMARY KEY AUTO_INCREMENT
-    ,totalMemoria DECIMAL(5,2)
-    ,porcentagemUso DECIMAL(5,2)
-    ,fkServidor INT
-    ,FOREIGN KEY (fkServidor) REFERENCES servidor(idServidor)
-    ,horario DATETIME
+INSERT INTO Metrica VALUES 
+	(null, "Porcentagem de uso da CPU", "%"),
+	(null, "Quatidade de CPU logica","vCPU"),
+	(null, "Porcentagem de uso da CPU por core","%"),
+	(null, "Frequência de uso da CPU", "MHz"),
+	(null, "Total de Memoria Ram", "GB"),
+	(null, "Porcentagem de uso da Memoria Ram", "%"),
+	(null, "Total de Disco", "TB"),
+	(null, "Porcentagem de uso de Disco", "%"),
+	(null, "Lido pelo Disco", "ms"),
+	(null, "Escrito pelo Disco", "ms");
+
+
+
+create table Parametro(
+	fkServidor int,
+    foreign key (fkServidor) references Servidor(idServidor),
+    fkMetrica int,
+    foreign key (fkMetrica) references Metrica(idMetrica)
 );
 
-CREATE TABLE swap(
-	id INT PRIMARY KEY AUTO_INCREMENT
-    ,totalMemoria DECIMAL(5,2)
-    ,porcentagemUso DECIMAL(5,2)
-    ,fkServidor INT
-    ,FOREIGN KEY (fkServidor) REFERENCES servidor(idServidor)
-	,horario DATETIME
+create table Leitura(
+	fkServidor int,
+    foreign key (fkServidor) references Servidor(idServidor),
+    fkMetrica int,
+    foreign key (fkMetrica) references Metrica(idMetrica),
+	dataLeitura datetime primary key,
+    valorLeitura varchar(45),
+    componente varchar(45)
+    
 );
 
-CREATE TABLE HistoricoCpu(
-	id INT PRIMARY KEY AUTO_INCREMENT
-    ,porcentagemUso DECIMAL(5,2)
-    ,qtdProcessos INT
-    ,fkServidor INT
-    ,FOREIGN KEY (fkServidor) REFERENCES servidor(idServidor)
-    ,horario DATETIME
-);
+select * from Metrica;
 
-CREATE TABLE disco(
-	id INT PRIMARY KEY AUTO_INCREMENT
-    ,porcentagemUso DECIMAL(5,2)
-    ,lido DECIMAL(5,2) 
-    ,escreveu DECIMAL(5,2)
-    ,fkServidor INT
-    ,FOREIGN KEY (fkServidor) REFERENCES servidor(idServidor)
-    ,horario DATETIME
-);
+select Usuario.nome as nomeUser, Usuario.email as emailUser, Usuario.senha as senhaUser, Empresa.nome as nomeEmpresa from Usuario, Empresa where Usuario.email = "admin@Lojas_Americanas.com" and usuario.senha = "admin123" and fkEmpresa = idEmpresa;
 
-select usuario.nome as nomeUser, usuario.email as emailUser, usuario.senha as senhaUser, empresa.nome as nomeEmpresa from usuario, empresa where usuario.email = "admin@Lojas_Americanas.com" and usuario.senha = "admin123" and fkEmpresa = idEmpresa;
+create view visualizacaoMensal as 
+select 
+	month(Leitura.dataLeitura) as "Mês",
+	day(Leitura.dataLeitura) as "Dia" ,
+	hour(Leitura.dataLeitura) as "Hora",
+	Leitura.componente,
+	Leitura.valorLeitura,
+	Metrica.nome as "Nome métrica",
+	Metrica.unidadeMedida,
+	Metrica.formato,
+	Servidor.idServidor 
+from Leitura, Metrica, Servidor 
+where Leitura.dataLeitura  between current_date()-30 and current_date() 
+and Leitura.fkServidor = Servidor.idServidor 
+and Leitura.fkMetrica = Metrica.idMetrica 
+ORDER BY Leitura.dataLeitura;
 
-select porcentagemCpu, horario from processo where fkServidor = '1';
-select * from ram;
-select * from disco;
-select * from historicoCpu;
-select * from processo;
+select * from visualizacaoMensal;
 
-create view usoAcimaDaMedia as select historicoCPU.id, historicoCpu.fkServidor as 'idServidor', historicoCPU.porcentagemUso, processo.nome,historicoCpu.qtdProcessos , totalMemoria, ram.porcentagemUso as "Porcentagem Ram", disco.lido, disco.escreveu, disco.porcentagemUso as 'porcentagemDisco', ram.horario, historicoCPU.Horario as 'Horario2'  from disco, processo, historicoCpu, ram where historicoCPU.porcentagemUso > 10.0 and historicoCpu.id = ram.id and historicoCpu.fkServidor = ram.fkServidor and HistoricoCpu.id = processo.id and HistoricoCpu.id = disco.id ORDER BY historicoCpu.porcentagemUso;
-drop view usoAcimaDaMedia;
-select * from usoAcimaDaMedia;
+drop view visualizacaoMensal;
 
-create view historicoSemana as select  historicoCpu.id, historicoCpu.fkServidor ,historicoCpu.porcentagemUso, historicoCpu.qtdProcessos, processo.nome, ram.totalMemoria, ram.porcentagemUso as 'Porcentagem Ram',disco.porcentagemUso as 'usoDisco', historicoCpu.horario  from ram, disco, processo, historicoCpu where historicoCpu.horario between current_date()-7 and current_date() and historicoCpu.id = ram.id and historicoCpu.id = disco.id and historicoCpu.id = processo.id and historicoCpu.fkServidor = ram.fkServidor and historicoCpu.fkServidor = disco.fkServidor and historicoCpu.fkServidor = processo.fkServidor;
-select * from historicoSemana;
+create view visualizacaoSemanal as 
+select
+	month(Leitura.dataLeitura) as "Mês" ,
+	day(Leitura.dataLeitura) as "Dia" ,
+	hour(Leitura.dataLeitura) as "Hora",
+	Leitura.componente,
+	Metrica.nome as "Nome métrica",
+	Leitura.valorLeitura,
+	Metrica.unidadeMedida,
+	Metrica.formato,
+	Servidor.idServidor 
+from Leitura, Metrica, Servidor 
+where Leitura.dataLeitura  between current_date()-7 and current_date() 
+and Leitura.fkServidor = Servidor.idServidor 
+and Leitura.fkMetrica = Metrica.idMetrica 
+ORDER BY Leitura.dataLeitura;
 
-create view historicoMensal as select historicoCpu.id, historicoCpu.fkServidor, historicoCpu.porcentagemUso, historicoCpu.qtdProcessos, processo.nome, ram.totalMemoria, ram.porcentagemUso as 'Porcentagem Ram',disco.porcentagemUso as 'usoDisco', historicoCpu.horario  from ram, disco, processo, historicoCpu where historicoCpu.horario between current_date()-30 and current_date() and historicoCpu.id = ram.id and historicoCpu.id = disco.id and historicoCpu.id = processo.id and historicoCpu.fkServidor = ram.fkServidor and historicoCpu.fkServidor = disco.fkServidor and historicoCpu.fkServidor = processo.fkServidor;
-select * from historicoMensal;
+select * from visualizacaoSemanal;
 
-drop database safecommerce;
+
+create view leituraCPU as 
+select 
+	m.idMetrica,
+    hour(l.dataLeitura) as "Hora",
+    l.valorLeitura as "valor",
+	s.idServidor
+from Leitura as l  
+inner join Metrica as m on l.fkMetrica = m.idMetrica
+inner join Servidor as s on l.fkServidor = s.idServidor 
+where m.idMetrica = "1";
+
+select * from leituraCPU;
+drop view leituraCPU;
+
+
+create view leituraRAM as 
+select
+	m.idMetrica, 
+    hour(l.dataLeitura) as "Hora",
+    l.valorLeitura as "valor",
+	s.idServidor
+from Leitura as l  
+inner join Metrica as m on l.fkMetrica = m.idMetrica
+inner join Servidor as s on l.fkServidor = s.idServidor 
+where m.idMetrica = "5" and m.idMetrica = "6";
+
+select * from leituraRAM;
+drop view leituraRAM;
+
+
+create view leituraDisco as 
+select
+	m.idMetrica,
+    hour(l.dataLeitura) as "Hora",
+    l.valorLeitura as "valor",
+	s.idServidor
+from Leitura as l  
+inner join Metrica as m on l.fkMetrica = m.idMetrica
+inner join Servidor as s on l.fkServidor = s.idServidor 
+where m.idMetrica = "7" and m.idMetrica = "8";
+
+-- select * from leituraDisco;
+-- drop view leituraDisco;
+
+-- drop view visualizacaoSemanal;
+
+-- drop database safecommerce
+
+-- select Leitura.fkEmpresa as "Empresa", Servidor. 

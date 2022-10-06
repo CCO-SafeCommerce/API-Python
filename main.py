@@ -4,11 +4,21 @@ from dashing import HSplit, VSplit, VGauge, HGauge, Text
 import psutil
 import os
 import mysql.connector
-import matplotlib.pyplot as plt
+import getmac
+import platform
+import bcrypt
 
-bdsql = mysql.connector.connect(host="localhost", user="aluno", password="sptech", database="safecommerce")
+
+
+bdsql = mysql.connector.connect(host="localhost", user="root", password="Vitor@2003", database="safecommerce")
 
 mycursor = bdsql.cursor()
+
+if os.name == 'nt':
+    limpar = "cls"
+
+else:
+    limpar = "clear"
 
 def tranformar_bytes_em_gigas(value):
     return value / 1024**3
@@ -67,36 +77,48 @@ interface_usuario = HSplit(  # Aqui tem a interface do usuario onde HSPLIT é a 
 
 
 while True :
-    os.system('cls')
+    os.system(limpar)
     print(f"Olá, Escolha uma das opções abaixo para prosseguir!")
     print("1. Cadastrar servidor.")
     print("2. Ver monitoramento.")
-    print("3. Ver gráfico.")
-    print("4. Sair.")
-    escolha = int(input("Digite aqui:"))
+    print("3. Sair.")
+    escolha = int(input("Digite aqui: "))
 
     if escolha == 1:
-        os.system('cls')
-        qtdServers = int(input("Quantos servidores você deseja cadastrar?\nDigite aqui:"))
-        i = 1   
-        while i <= qtdServers :
-            mycursor.execute("INSERT INTO servidor VALUES()")
+        os.system(limpar)
+        print("Seu servidor esta sendo cadastrado...")
+        sleep(0.8)
 
+        mac_add = getmac.get_mac_address()
+        mycursor.execute(f"select * from Servidor where enderecoMac = '{mac_add}'")
+
+        teste = mycursor.fetchall()
+
+        if len(teste) > 0:
+            print("Esse servidor já possui cadastro!")
+            sleep(2)
+
+        else:
+            os.system(limpar)
+            modelo = input("Insira o nome do modelo do servidor: ")
+            mac_add = getmac.get_mac_address()  
+            so = platform.system()
+            mycursor.execute(f"INSERT INTO Servidor VALUES(NULL, '{modelo}', '{so}', '{mac_add}', NULL)")
+    
             bdsql.commit()
 
-            i += 1
-
-        print("Cadastro realizado com sucesso!")
-        sleep(3)
+            os.system(limpar)
+            print("Cadastro realizado com sucesso!")
+            sleep(3)
 
     elif escolha == 2:
 
-        mycursor.execute("SELECT * FROM servidor")
+        mycursor.execute(f"SELECT * FROM Servidor WHERE enderecoMac = '{mac_add}'")
 
         resposta = mycursor.fetchall()
 
         if len(resposta) > 0:
-            os.system("cls")
+            os.system(limpar)
             print("Escolha um dos servidores cadastrados: ")
 
             for row in resposta :
@@ -104,7 +126,7 @@ while True :
 
             servidor = int(input("Qual o servidor você quer monitorar?\nDigite aqui:"))
 
-            os.system('cls')
+            os.system(limpar)
             print("Aperte CTRL + C para sair do monitoramento!")
 
             sleep(2)
@@ -116,16 +138,23 @@ while True :
                     if processos_info['cpu_percent'] > 0:
                         nome = processos_info['name']
                         porcentagemProcesso = processos_info['cpu_percent'] 
-                        sql = "INSERT INTO processo(nome, porcentagemCpu, fkServidor, horario) VALUES(%s, %s, %s, now())"
-                        val = (nome, porcentagemProcesso, servidor, )
-                        mycursor.execute(sql, val)
+                        componente = "CPU"
+                        metrica_cpu = 1
+                        # sql = f"INSERT INTO Parametro VALUES({servidor}, {metrica_cpu})"
+                        sql= f"INSERT INTO Leitura VALUES({servidor}, {metrica_cpu}, now(), {porcentagemProcesso}, {componente}"
+                        # val = (nome, porcentagemProcesso, servidor, )
+                        mycursor.execute(sql)
 
                         bdsql.commit()
+                    
+                    else:
+                        print("Servidor invalido")
+                    
 
-                sql = "SELECT nome, max(porcentagemCpu) FROM processo WHERE fkServidor = %s AND DAY(horario) >= DAY(now()) AND MINUTE(horario) >= MINUTE(now()) GROUP BY nome ORDER BY max(porcentagemCpu) DESC LIMIT 10"
-                val = (servidor, )
+                sql = f"SELECT * FROM LeituraCPU WHERE l.fkServidor = {servidor}" #Testando para ver se a view funciona
 
-                mycursor.execute(sql, val)
+
+                mycursor.execute(sql)
 
                 resposta = mycursor.fetchall()
                 
@@ -142,6 +171,8 @@ while True :
 
                 
                 # nesse parte do codigo estou pegando a informação da memória RAM e SWAP e cadastrando no banco de dados
+
+                
                 
                 memoria_tui = interface_usuario.items[0].items[1] # aqui estou dizendo que a memoria está na primeira posição da vertical ou seja no
                 # primeiro bloco da divisão vertical e que ele está na segunda posição da horizontal ou seja no segundo bloco da divisão horizontal
@@ -150,7 +181,7 @@ while True :
                 porcentagemRam = psutil.virtual_memory().percent
                 ram_tui.value = porcentagemRam # aqui estou mostrando a porcentagem de cpu da dashboard
                 ram_tui.title = f'RAM {ram_tui.value} %' # Aqui estou dando um titulo para a dash, e o f é para formatar o texto
-                sql = "INSERT INTO ram(totalMemoria, porcentagemUso, fkServidor, horario) VALUES(%s, %s, %s, now())" 
+                sql = f"INSERT INTO leitura values()" 
                 val = (totalRam, porcentagemRam, servidor, )
                 mycursor.execute(sql, val)
                 bdsql.commit()
@@ -224,189 +255,37 @@ while True :
                     interface_usuario.display() #mostra a interface
                     sleep(1) #espera 1 segundo para mostrar a proxima informação
                 except KeyboardInterrupt:
+                    sql = mycursor.execute(f"")
+        
+        
                     break #encerra o loop ao pressionar Ctrl+C
 
+       
+
+
+
+
         else:
-            print("Nenhuma resposta encontrada!")
-            sleep(3)
+         os.system(limpar)
+         sleep(0.8)
+         print("Nehum Servidor cadastrado")
+         sleep(0.8)
+         print("Realizando pré-cadastro")
+         sleep(0.8)
+         os.system(limpar)
+         modelo = input("Insira o nome do modelo do servidor: ")
+         mac_add = getmac.get_mac_address()  
+         mycursor.execute(f"INSERT INTO Servidor VALUES(NULL, '{modelo}', '{so}', '{mac_add}', NULL)")
     
+         bdsql.commit()
+
+         os.system(limpar)
+         print("Cadastro realizado com sucesso!")
+         sleep(3)
+    
+
     elif escolha == 3:
-        mycursor.execute("SELECT * FROM servidor")
-
-        resposta = mycursor.fetchall()
-
-        if len(resposta) > 0:
-            os.system("cls")
-            print("Você deseja ver os gráficos de qual servidor?")
-
-            for row in resposta :
-                print(f"{row[0]}° Servidor")
-
-            servidor = int(input("Digite aqui:"))
-
-            os.system('cls')
-            print("Você deseja ver o gráfico de qual componente?")
-            print("1. Processos")
-            print("2. RAM")
-            print("3. SWAP")
-            print("4. CPU")
-            print("5. Disco")
-            
-            escolhaGrafico = int(input("Digite aqui:"))
-
-            if escolhaGrafico == 1:
-                sql = "SELECT porcentagemCpu, nome, DATE_FORMAT(horario, '%e %b, %H:%i') AS horario FROM processo WHERE fkServidor = %s AND day(horario) >= day(now()) GROUP BY nome ORDER BY porcentagemCpu DESC LIMIT 5"
-                parametros = (servidor, )
-
-                mycursor.execute(sql, parametros)
-
-                resposta = mycursor.fetchall()
-
-                porCpu = []
-                horarioProcesso = []
-
-                for row in resposta:
-                    porCpu.append(row[0])
-                    horarioProcesso.append(row[1] + "\n" + row[2])
-
-
-                plt.bar(horarioProcesso, porCpu, color="green")
-
-                plt.xticks(horarioProcesso)
-
-                plt.xlabel('Nome e horario do processo')
-
-                plt.ylabel('Porcentagem de uso do processo')
-
-                plt.title('Quantidade de uso da cpu dos processos por horario do dia atual')
-
-                plt.show()
-            
-            elif escolhaGrafico == 2:
-                sql = "SELECT porcentagemUso, DATE_FORMAT(horario, '%e %b, %H:%i') AS horario FROM ram WHERE fkServidor = %s AND day(horario) >= day(now()) GROUP BY porcentagemUso ORDER BY porcentagemUso DESC LIMIT 5"
-                parametros = (servidor, )
-
-                mycursor.execute(sql, parametros)
-
-                resposta = mycursor.fetchall()
-
-                porCpu = []
-                horarioProcesso = []
-
-                for row in resposta:
-                    porCpu.append(row[0])
-                    horarioProcesso.append(str(row[0]) +  "%\n" + row[1])
-
-                
-                plt.bar(horarioProcesso, porCpu, color="red")
-
-                plt.xticks(horarioProcesso)
-
-                plt.ylim([0, 100])
-
-                plt.xlabel('Porcentagem e horario da memoria ram')
-
-                plt.ylabel('Porcentagem total da memoria ram')
-
-                plt.title('Porcentagem de uso da RAM e seus horarios do dia atual')
-
-                plt.show()
-
-            elif escolhaGrafico == 3:
-                sql = "SELECT porcentagemUso, DATE_FORMAT(horario, '%e %b, %H:%i') AS horario FROM swap WHERE fkServidor = %s AND day(horario) >= day(now()) GROUP BY porcentagemUso ORDER BY porcentagemUso DESC LIMIT 5"
-                parametros = (servidor, )
-
-                mycursor.execute(sql, parametros)
-
-                resposta = mycursor.fetchall()
-
-                porCpu = []
-                horarioProcesso = []
-
-                for row in resposta:
-                    porCpu.append(row[0])
-                    horarioProcesso.append(str(row[0]) +  "%\n" + row[1])
-
-                
-                plt.bar(horarioProcesso, porCpu, color="blue")
-
-                plt.xticks(horarioProcesso)
-
-                plt.ylim([0, 100])
-
-                plt.xlabel('Porcentagem e horario da memoria swap')
-
-                plt.ylabel('Porcentagem total de memoria swap')
-
-                plt.title('Porcentagem de uso da swap e seus horarios do dia atual')
-
-                plt.show()
-
-            elif escolhaGrafico == 4:
-                sql = "SELECT porcentagemUso, qtdProcessos, DATE_FORMAT(horario, '%e %b, %H:%i') AS horario FROM HistoricoCpu WHERE fkServidor = %s GROUP BY porcentagemUso ORDER BY porcentagemUso DESC LIMIT 5;"
-                parametros = (servidor, )
-
-                mycursor.execute(sql, parametros)
-
-                resposta = mycursor.fetchall()
-
-                porCpu = []
-                horarioProcesso = []
-
-                for row in resposta:
-                    porCpu.append(row[0])
-                    horarioProcesso.append(str(row[0]) + "%\nProcessos: " + str(row[1]) + "\n" + row[2])
-
-
-                plt.bar(horarioProcesso, porCpu, color="purple")
-
-                plt.xticks(horarioProcesso)
-
-                plt.ylim([0, 100])
-
-                plt.xlabel('Porcentagem de uso, quantidade de processos, e data da CPU')
-
-                plt.ylabel('Porcentagem de uso total da CPU')
-
-                plt.title('Quantidade de uso da CPU dos processos por horario')
-
-                plt.show()
-
-            elif escolhaGrafico == 5:
-                sql = "SELECT porcentagemUso, lido, escreveu, DATE_FORMAT(horario, '%e %b, %H:%i') AS horario FROM disco WHERE fkServidor = %s AND day(horario) >= day(now()) GROUP BY porcentagemUso ORDER BY porcentagemUso DESC LIMIT 4"
-                parametros = (servidor, )
-
-                mycursor.execute(sql, parametros)
-
-                resposta = mycursor.fetchall()
-
-                porCpu = []
-                horarioProcesso = []
-
-                for row in resposta:
-                    porCpu.append(row[0])
-                    horarioProcesso.append(str(row[0]) + "%, Lido:" + str(row[1]) + "\nEscrito:" + str(row[2]) + "\n" + row[3])
-
-
-                plt.bar(horarioProcesso, porCpu, color="gold")
-
-                plt.xticks(horarioProcesso)
-
-                plt.xlabel('Porcentagem de uso, lido, escrito e horario do disco')
-
-                plt.ylabel('Porcentagem de uso total do disco')
-
-                plt.title('Dados sobre o disco no dia de hoje')
-
-                plt.show()
-            else:
-                print("Digite algo valido, por favor!")
-
-        else:
-            print("Nenhum resultado encontrado!")
-            sleep(3)
-    elif escolha == 4:
-        os.system('cls')
+        os.system(limpar)
         break
 
     else:
