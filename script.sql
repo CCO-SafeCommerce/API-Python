@@ -46,8 +46,6 @@ INSERT INTO Metrica VALUES
 	(null, "Lido pelo Disco", "ms"),
 	(null, "Escrito pelo Disco", "ms");
 
-
-
 create table Parametro(
 	fkServidor int,
     foreign key (fkServidor) references Servidor(idServidor),

@@ -5,6 +5,9 @@ import mysql.connector
 from getpass import getpass
 import bcrypt
 from dashing import HSplit, VSplit, VGauge, HGauge, Text
+import psutil
+from time import sleep
+import requests
 
 HOST = "localhost"
 USER = "aluno"
@@ -18,6 +21,9 @@ if os.name == 'nt':
     limpar = "cls"
 else:
     limpar = "clear"
+
+def transformar_bytes_em_gigas(value):
+    return value / 1024**3
 
 def verificar_servidor_cadastrado():
     resultado = False
@@ -67,7 +73,7 @@ def login():
             conexao.close()           
 
             if len(usuarios) > 0:
-                is_senha_correta = bcrypt.checkpw(senha.encode('UTF-8'), usuarios[0][1].enconde('UTF-8'))
+                is_senha_correta = bcrypt.checkpw(senha.encode('UTF-8'), usuarios[0][1].encode('UTF-8'))
 
                 if is_senha_correta:
                     print("Login realizado com sucesso.")
@@ -158,6 +164,14 @@ def obter_parametros_coleta(id_servidor):
 
     return parametros
 
+def enviar_mensagem_slack(mensagem):
+    #Variável que define o tipo de dados que estamos enviando. E que envie a solicitação e poste está mensagem
+    payload = '{"text":"%s"}' % mensagem
+    
+    # Variável que irá obter reposta que iremos receber da API. Logo depois do sinal de igual tem a chamada da bilioteca de solicitaçao. 
+    # E também o link do bot criado para o envio de mensagens
+    resposta = requests.post('https://hooks.slack.com/services/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', data=payload)
+
 def lidar_coleta_dados():
     interface_usuario = HSplit(  # Aqui tem a interface do usuario onde HSPLIT é a divisão horizontal e VSPLIT é a divisão vertical
         VSplit( # interface_usuario.items[0]
@@ -211,38 +225,111 @@ def lidar_coleta_dados():
     )
 
     monitorando = True
+    controle_insert = 0
     id_servidor = obter_id_servidor()
-    slas = [(0,0)]
+
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
 
     while monitorando:
-        parametros_coleta = obter_parametros_coleta(id_servidor)
+        try:
+            print("Monitorando...")
+            parametros_coleta = obter_parametros_coleta(id_servidor)
 
-        leituras = []
+            leituras = []
 
-        for parametro in parametros_coleta:
-            metrica = parametro[0]
+            for parametro in parametros_coleta:
+                metrica = parametro[0]
 
-            if metrica == 1:
-                print("CPU")
+                if metrica == 1:
+                    # Porcentagem de uso da CPU (%)
 
-                valor_lido = 67.51
-                componente = "chrome.exe"
+                    valor_lido = psutil.cpu_percent(interval=0.5)
+                    componente = "CPU"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 2:
+                    # Quatidade de CPU logica (vCPU)
+
+                    valor_lido = psutil.cpu_count(logical=True)
+                    componente = "vCPU"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
                 
-                if valor_lido >= 75:
-                    print("SLA")
+                elif metrica == 3:
+                    # Porcentagem de uso da CPU por CPU (%)
 
-            elif metrica == 2:
-                print("RAM")
+                    coleta = psutil.cpu_percent(interval=0.5, percpu=True)
 
-            leituras.append((id_servidor, metrica, valor_lido, componente))
+                    for index in range(len(coleta)):
+                        valor_lido = coleta[index]
+                        componente = f"CPU {index + 1}"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-        conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
-        cursor = conexao.cursor()
+                elif metrica == 4:
+                    # Frequência de uso da CPU (MHz)
 
-        cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
-        conexao.commit()
+                    valor_lido = psutil.cpu_freq().current
+                    componente = "CPU"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
 
+                elif metrica == 5:
+                    # Total de Memoria Ram (GB)
 
+                    valor_lido_bruto = psutil.virtual_memory().total
+                    valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
+                    componente = "RAM"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 6: 
+                    # Porcentagem de uso da Memoria Ram (%)
+
+                    valor_lido = psutil.virtual_memory().percent
+                    componente = "RAM"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 7:
+                    # Total de Disco (TB)
+
+                    valor_lido_bruto = psutil.disk_usage('/').total
+                    valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
+                    componente = "DISCO"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 8:
+                    # Porcentagem de uso de Disco (%)
+
+                    valor_lido_bruto = psutil.disk_usage('/').percent
+                    componente = "DISCO"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 9:
+                    # Lido pelo Disco (ms)
+
+                    valor_lido_bruto = psutil.disk_io_counters('/').read_time
+                    componente = "DISCO"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                elif metrica == 10:
+                    # Escrito pelo Disco (ms)
+
+                    valor_lido_bruto = psutil.disk_io_counters('/').write_time
+                    componente = "DISCO"
+                    leituras.append((id_servidor, metrica, valor_lido, componente))
+
+            if len(leituras) > 0 and controle_insert % 10 == 0:
+                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
+                conexao.commit()
+
+                leituras.clear()
+
+            controle_insert += 1
+            sleep(0.5)
+            
+        except KeyboardInterrupt:
+            monitorando = False
+    
+    cursor.close()
+    conexao.close()
 
 def main():
     print("SafeCommerce - API Coleta de Dados\n")
