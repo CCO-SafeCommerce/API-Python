@@ -137,3 +137,4 @@ inner join Metrica as m on l.fkMetrica = m.idMetrica
 inner join Servidor as s on l.fkServidor = s.idServidor 
 where m.idMetrica = 7 and m.idMetrica = 8;
 select * from leituraDisco;
+desc empresa;

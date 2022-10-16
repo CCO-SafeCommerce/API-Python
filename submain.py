@@ -1,4 +1,5 @@
 import os
+from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter
 import platform
 import getmac
 import mysql.connector
@@ -10,8 +11,8 @@ from time import sleep
 import requests
 
 HOST = "localhost"
-USER = "aluno"
-PASS = "sptech"
+USER = "root"
+PASS = "Vitor@2003"
 DB = "safecommerce"
 
 SLA_AVISO = 120
@@ -31,7 +32,7 @@ def verificar_servidor_cadastrado():
     global mac_add
     mac_add = getmac.get_mac_address()
 
-    conexao = mysql.connector.connect(host="localhost", user="aluno", password="sptech", database="safecommerce")
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
     cursor.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
@@ -76,12 +77,16 @@ def login():
                 is_senha_correta = bcrypt.checkpw(senha.encode('UTF-8'), usuarios[0][1].encode('UTF-8'))
 
                 if is_senha_correta:
+                    global fk_empresa                    
+                    fk_empresa = usuarios[0][2]
+                    print(usuarios)
+                    print(usuarios[0])
+                    print(usuarios[0][2])
                     print("Login realizado com sucesso.")
                     resultado = True
                     deseja_continuar = False
 
-                    global fk_empresa                    
-                    fk_empresa = usuarios[0][2]
+                    
 
                 else:
                     print("Email e/ou Senha incorreto(s)!")
@@ -105,6 +110,7 @@ def cadastrar_servidor():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
+    print(fk_empresa)
     cursor.execute(f"INSERT INTO Servidor VALUES (null, '{modelo}', '{so}', '{mac_add}', {fk_empresa})")
     conexao.commit()
 
@@ -173,56 +179,45 @@ def enviar_mensagem_slack(mensagem):
     resposta = requests.post('https://hooks.slack.com/services/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', data=payload)
 
 def lidar_coleta_dados():
-    interface_usuario = HSplit(  # Aqui tem a interface do usuario onde HSPLIT é a divisão horizontal e VSPLIT é a divisão vertical
-        VSplit( # interface_usuario.items[0]
-            Text( # interface_usuario.items[0].items[0]
-                ' ',
-                border_color=9, # cor da borda
-                color=4, # cor do texto
-                title='Processos' # titulo
-            ),
-            HSplit(  # interface_usuario.items[0].items[1]
-                VGauge(title='RAM'),  # interface_usuario.items[0].items[0] - RAM - VGauge é um medidor vertical
-                VGauge(title='SWAP'),  # interface_usuario.items[0].items[1], Onde items[0] é o primeiro item e items[1] é o segundo item da divisão horizontal
-                title='Memória',
-                border_color=3
-            ),
-        ),
-        VSplit(  # interface_usuario.items[1]
-            HGauge(title='CPU %'),
-            HGauge(title='CPU_0'),
-            HGauge(title='CPU_1'),
-            HGauge(title='CPU_2'),
-            HGauge(title='CPU_3'),
-            HGauge(title='CPU_4'),
-            HGauge(title='CPU_5'),
-            HGauge(title='CPU_'),
-            HGauge(title='CPU_'),
-            title='CPU',
-            color=4,
-            border_color=5,
-        ),
-        VSplit(  # interface_usuario.items[2]
+    interface = HSplit(
+        VSplit( # CPU
             Text(
-                ' ',
-                title='Outros',
-                color=4,
-                border_color=4
-            ),
-            Text(
-                ' ',
-                title='Disco',
-                color=4,
-                border_color=6
-            ),
-            Text(
-                ' ',
-                title='Rede',
-                color=4,
-                border_color=7
-            ),
+                '',
+                title="Medidas da CPU",
+                border_color =4,
+                color= 7)   
         ),
-    )
+
+        VSplit( #RAM
+            Text(
+                '',
+                title="Medidas da RAM",
+                border_color=3,
+                color=7
+            ),
+
+
+            Text(
+                '',
+                title="Medidas do Disco",
+                border_color=1,
+                color=7
+            )
+        ),
+        
+
+
+        VSplit( #PROCESSOS
+            Text(
+                '',
+                title="Listagem de Processos",
+                border_color=2,
+                color=7
+            )
+        )
+  )
+
+    
 
     monitorando = True
     controle_insert = 0
@@ -232,101 +227,155 @@ def lidar_coleta_dados():
     cursor = conexao.cursor()
 
     while monitorando:
-        try:
-            print("Monitorando...")
-            parametros_coleta = obter_parametros_coleta(id_servidor)
+            #Porcentagem de Uso da CPU
+            CPU_L = interface.items[0].items[0]
+            CPU_L.text = f''
+            CPU_L.text += f'\nPorcentagem de uso: {cpu_percent()}%\n'
 
-            leituras = []
+            #Quantidade de cpu logica
+            CPU_L.text += f'\nQuantidade de cpus logicas: {cpu_count()}u\n'
 
-            for parametro in parametros_coleta:
-                metrica = parametro[0]
+            #Porcentagem de uso de Core por CPU
+            ps_cpu_percent = cpu_percent(percpu=True)
+            for i in range(len(ps_cpu_percent)):
+       
+                CPU_L.text += f'\nUso da CPU {i + 1}: {ps_cpu_percent[i]}%\n'
+            
+            # #Frequencia de CPU
+            CPU_L.text += f'\nFrequência de uso da CPU:\n{cpu_freq(percpu=False)}Mhz\n'
 
-                if metrica == 1:
-                    # Porcentagem de uso da CPU (%)
+            #Total de memória RAM
+            ram = interface.items[1].items[0]
+            ram.text = f''
+            ram.text += f'\nTotal de memória RAM: {round(virtual_memory().total)} Gb\n'
 
-                    valor_lido = psutil.cpu_percent(interval=0.5)
-                    componente = "CPU"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+            # Frequencia de uso da RAM
+            ram.text += f'\nTotal de uso de memória RAM: {virtual_memory().percent}%\n'
 
-                elif metrica == 2:
-                    # Quatidade de CPU logica (vCPU)
+            #Total de Disco
+            disco= interface.items[1].items[1]
+            disco.text = f''
+            disco.text += f'\nTotal de Disco: {disk_usage("/").total} Tb\n'
+            
+            #Uso de Disco
+            disco.text += f'\nTotal de uso de Disco: {disk_usage("/").percent}%\n'
 
-                    valor_lido = psutil.cpu_count(logical=True)
-                    componente = "vCPU"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+            #Lidos Pelo Disco
+            disco.text += f'\nTotal Lido Pelo Disco: {disk_io_counters(perdisk=False, nowrap=True).read_time} ms\n'
+
+            #Escrito Pelo Disco
+            disco.text += f'\nTotal Escrito Pelo Disco: {disk_io_counters(perdisk=False, nowrap=True).write_time} ms'
+
+            #Listagem de Processos
+            processos = interface.items[2].items[0]
+            # processos.text = 'Teste'
+            cont = 0
+            processos.text = f''
+            for proc in process_iter(['pid', 'name', 'username']):
+
+                if cont < 5:
+                    processos.text += f'\nNome: {proc.name()}   Pid: {proc.pid} \n'
+                cont += 1
                 
-                elif metrica == 3:
-                    # Porcentagem de uso da CPU por CPU (%)
 
-                    coleta = psutil.cpu_percent(interval=0.5, percpu=True)
+            try:
+                os.system(limpar)
+                interface.display()
+                sleep(2)
 
-                    for index in range(len(coleta)):
-                        valor_lido = coleta[index]
-                        componente = f"CPU {index + 1}"
+                parametros_coleta = obter_parametros_coleta(id_servidor)
+
+                leituras = []
+
+                for parametro in parametros_coleta:
+                    metrica = parametro[0]
+
+                    if metrica == 1:
+                        # Porcentagem de uso da CPU (%)
+
+                        valor_lido = psutil.cpu_percent(interval=0.5)
+                        componente = "CPU"
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 4:
-                    # Frequência de uso da CPU (MHz)
+                    elif metrica == 2:
+                        # Quatidade de CPU logica (vCPU)
 
-                    valor_lido = psutil.cpu_freq().current
-                    componente = "CPU"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido = psutil.cpu_count(logical=True)
+                        componente = "vCPU"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                    
+                    elif metrica == 3:
+                        # Porcentagem de uso da CPU por CPU (%)
 
-                elif metrica == 5:
-                    # Total de Memoria Ram (GB)
+                        coleta = psutil.cpu_percent(interval=0.5, percpu=True)
 
-                    valor_lido_bruto = psutil.virtual_memory().total
-                    valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
-                    componente = "RAM"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        for index in range(len(coleta)):
+                            valor_lido = coleta[index]
+                            componente = f"CPU {index + 1}"
+                            leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 6: 
-                    # Porcentagem de uso da Memoria Ram (%)
+                    elif metrica == 4:
+                        # Frequência de uso da CPU (MHz)
 
-                    valor_lido = psutil.virtual_memory().percent
-                    componente = "RAM"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido = psutil.cpu_freq().current
+                        componente = "CPU"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 7:
-                    # Total de Disco (TB)
+                    elif metrica == 5:
+                        # Total de Memoria Ram (GB)
 
-                    valor_lido_bruto = psutil.disk_usage('/').total
-                    valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
-                    componente = "DISCO"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido_bruto = psutil.virtual_memory().total
+                        valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
+                        componente = "RAM"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 8:
-                    # Porcentagem de uso de Disco (%)
+                    elif metrica == 6: 
+                        # Porcentagem de uso da Memoria Ram (%)
 
-                    valor_lido_bruto = psutil.disk_usage('/').percent
-                    componente = "DISCO"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido = psutil.virtual_memory().percent
+                        componente = "RAM"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 9:
-                    # Lido pelo Disco (ms)
+                    elif metrica == 7:
+                        # Total de Disco (TB)
 
-                    valor_lido_bruto = psutil.disk_io_counters('/').read_time
-                    componente = "DISCO"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido_bruto = psutil.disk_usage('/').total
+                        valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
+                        componente = "DISCO"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-                elif metrica == 10:
-                    # Escrito pelo Disco (ms)
+                    elif metrica == 8:
+                        # Porcentagem de uso de Disco (%)
 
-                    valor_lido_bruto = psutil.disk_io_counters('/').write_time
-                    componente = "DISCO"
-                    leituras.append((id_servidor, metrica, valor_lido, componente))
+                        valor_lido_bruto = psutil.disk_usage('/').percent
+                        componente = "DISCO"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-            if len(leituras) > 0 and controle_insert % 10 == 0:
-                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
-                conexao.commit()
+                    elif metrica == 9:
+                        # Lido pelo Disco (ms)
 
-                leituras.clear()
+                        valor_lido_bruto = psutil.disk_io_counters('/').read_time
+                        componente = "DISCO"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
 
-            controle_insert += 1
-            sleep(0.5)
-            
-        except KeyboardInterrupt:
-            monitorando = False
+                    elif metrica == 10:
+                        # Escrito pelo Disco (ms)
+
+                        valor_lido_bruto = psutil.disk_io_counters('/').write_time
+                        componente = "DISCO"
+                        leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                if len(leituras) > 0 and controle_insert % 10 == 0:
+                    cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
+                    conexao.commit()
+
+                    leituras.clear()
+
+                controle_insert += 1
+                sleep(0.5)
+                
+            except KeyboardInterrupt:
+                monitorando = False
     
     cursor.close()
     conexao.close()
