@@ -5,14 +5,13 @@ import getmac
 import mysql.connector
 from getpass import getpass
 import bcrypt
-from dashing import HSplit, VSplit, VGauge, HGauge, Text
-import psutil
+from dashing import HSplit, VSplit, Text
 from time import sleep
 import requests
 
 HOST = "localhost"
-USER = "root"
-PASS = "Vitor@2003"
+USER = "aluno"
+PASS = "sptech"
 DB = "safecommerce"
 
 SLA_AVISO = 120
@@ -117,6 +116,9 @@ def cadastrar_servidor():
     if cursor.rowcount == 0:
         print("ERRO: Falha ao cadastrar servidor")
         return servidor_foi_cadastrado
+    else:
+        cursor.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7);")
+        conexao.commit()
 
     servidor_foi_cadastrado = True
 
@@ -161,7 +163,7 @@ def obter_parametros_coleta(id_servidor):
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    cursor.execute(f"SELECT fkMetrica FROM Parametro WHERE fkServidor = {id_servidor}")
+    cursor.execute(f"SELECT fk_metrica FROM Parametro WHERE fk_servidor = {id_servidor}")
 
     parametros = cursor.fetchall()
 
@@ -187,7 +189,6 @@ def lidar_coleta_dados():
                 border_color =4,
                 color= 7)   
         ),
-
         VSplit( #RAM
             Text(
                 '',
@@ -195,8 +196,6 @@ def lidar_coleta_dados():
                 border_color=3,
                 color=7
             ),
-
-
             Text(
                 '',
                 title="Medidas do Disco",
@@ -204,9 +203,6 @@ def lidar_coleta_dados():
                 color=7
             )
         ),
-        
-
-
         VSplit( #PROCESSOS
             Text(
                 '',
@@ -215,9 +211,7 @@ def lidar_coleta_dados():
                 color=7
             )
         )
-  )
-
-    
+    )
 
     monitorando = True
     controle_insert = 0
@@ -226,63 +220,24 @@ def lidar_coleta_dados():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
+    os.system(limpar)                
     while monitorando:
-            #Porcentagem de Uso da CPU
+            #Textos CPU
             CPU_L = interface.items[0].items[0]
-            CPU_L.text = f''
-            CPU_L.text += f'\nPorcentagem de uso: {cpu_percent()}%\n'
+            CPU_L.text = ''            
 
-            #Quantidade de cpu logica
-            CPU_L.text += f'\nQuantidade de cpus logicas: {cpu_count()}u\n'
+            #Textos RAM
+            RAM = interface.items[1].items[0]
+            RAM.text = ''
 
-            #Porcentagem de uso de Core por CPU
-            ps_cpu_percent = cpu_percent(percpu=True)
-            for i in range(len(ps_cpu_percent)):
-       
-                CPU_L.text += f'\nUso da CPU {i + 1}: {ps_cpu_percent[i]}%\n'
-            
-            # #Frequencia de CPU
-            CPU_L.text += f'\nFrequência de uso da CPU:\n{cpu_freq(percpu=False)}Mhz\n'
+            #Textos DISCO
+            DISCO = interface.items[1].items[1]
+            DISCO.text = ''
 
-            #Total de memória RAM
-            ram = interface.items[1].items[0]
-            ram.text = f''
-            ram.text += f'\nTotal de memória RAM: {round(virtual_memory().total)} Gb\n'
-
-            # Frequencia de uso da RAM
-            ram.text += f'\nTotal de uso de memória RAM: {virtual_memory().percent}%\n'
-
-            #Total de Disco
-            disco= interface.items[1].items[1]
-            disco.text = f''
-            disco.text += f'\nTotal de Disco: {disk_usage("/").total} Tb\n'
-            
-            #Uso de Disco
-            disco.text += f'\nTotal de uso de Disco: {disk_usage("/").percent}%\n'
-
-            #Lidos Pelo Disco
-            disco.text += f'\nTotal Lido Pelo Disco: {disk_io_counters(perdisk=False, nowrap=True).read_time} ms\n'
-
-            #Escrito Pelo Disco
-            disco.text += f'\nTotal Escrito Pelo Disco: {disk_io_counters(perdisk=False, nowrap=True).write_time} ms'
-
-            #Listagem de Processos
-            processos = interface.items[2].items[0]
-            # processos.text = 'Teste'
-            cont = 0
-            processos.text = f''
-            for proc in process_iter(['pid', 'name', 'username']):
-
-                if cont < 5:
-                    processos.text += f'\nNome: {proc.name()}   Pid: {proc.pid} \n'
-                cont += 1
-                
+            PROCESSOS = interface.items[2].items[0]
+            PROCESSOS.text = ''
 
             try:
-                os.system(limpar)
-                interface.display()
-                sleep(2)
-
                 parametros_coleta = obter_parametros_coleta(id_servidor)
 
                 leituras = []
@@ -293,77 +248,95 @@ def lidar_coleta_dados():
                     if metrica == 1:
                         # Porcentagem de uso da CPU (%)
 
-                        valor_lido = psutil.cpu_percent(interval=0.5)
+                        valor_lido = cpu_percent(interval=0.5)
                         componente = "CPU"
+                        CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 2:
                         # Quatidade de CPU logica (vCPU)
 
-                        valor_lido = psutil.cpu_count(logical=True)
+                        valor_lido = cpu_count(logical=True)
                         componente = "vCPU"
+                        CPU_L.text += f'\nQuantidade de CPU lógica: {valor_lido}\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
                     
                     elif metrica == 3:
                         # Porcentagem de uso da CPU por CPU (%)
 
-                        coleta = psutil.cpu_percent(interval=0.5, percpu=True)
+                        coleta = cpu_percent(interval=0.5, percpu=True)
 
                         for index in range(len(coleta)):
                             valor_lido = coleta[index]
                             componente = f"CPU {index + 1}"
+                            CPU_L.text += f'\nUso da {componente}: {valor_lido}%\n'
                             leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 4:
                         # Frequência de uso da CPU (MHz)
 
-                        valor_lido = psutil.cpu_freq().current
+                        valor_lido = cpu_freq().current
                         componente = "CPU"
+                        CPU_L.text += f'\nFrequência de uso da CPU: {valor_lido}MHz\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 5:
                         # Total de Memoria Ram (GB)
 
-                        valor_lido_bruto = psutil.virtual_memory().total
+                        valor_lido_bruto = virtual_memory().total
                         valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                         componente = "RAM"
+                        RAM.text += f'\nTotal de memória RAM: {round(valor_lido)} GB\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 6: 
                         # Porcentagem de uso da Memoria Ram (%)
 
-                        valor_lido = psutil.virtual_memory().percent
+                        valor_lido = virtual_memory().percent
                         componente = "RAM"
+                        RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 7:
-                        # Total de Disco (TB)
+                        # Total de Disco (GB)
 
-                        valor_lido_bruto = psutil.disk_usage('/').total
+                        valor_lido_bruto = disk_usage('/').total
                         valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                         componente = "DISCO"
+                        DISCO.text += f'\nTotal de Disco: {round(valor_lido)} GB\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 8:
                         # Porcentagem de uso de Disco (%)
 
-                        valor_lido_bruto = psutil.disk_usage('/').percent
+                        valor_lido_bruto = disk_usage('/').percent
                         componente = "DISCO"
+                        DISCO.text += f'\nTotal de uso de Disco: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 9:
                         # Lido pelo Disco (ms)
 
-                        valor_lido_bruto = psutil.disk_io_counters('/').read_time
+                        valor_lido = disk_io_counters('/').read_time
                         componente = "DISCO"
+                        DISCO.text += f'\nTotal Lido Pelo Disco: {valor_lido} ms\n'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
 
                     elif metrica == 10:
                         # Escrito pelo Disco (ms)
 
-                        valor_lido_bruto = psutil.disk_io_counters('/').write_time
+                        valor_lido = disk_io_counters('/').write_time
                         componente = "DISCO"
+                        DISCO.text += f'\nTotal Escrito Pelo Disco: {valor_lido} ms'
                         leituras.append((id_servidor, metrica, valor_lido, componente))
+
+                #Listagem de Processos                
+                cont = 0                
+                for proc in process_iter(['pid', 'name', 'username']):
+                    if cont < 5:
+                        PROCESSOS.text += f'\nNome: {proc.name()}   Pid: {proc.pid} \n'
+
+                    cont += 1
 
                 if len(leituras) > 0 and controle_insert % 10 == 0:
                     cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
@@ -372,6 +345,7 @@ def lidar_coleta_dados():
                     leituras.clear()
 
                 controle_insert += 1
+                interface.display()
                 sleep(0.5)
                 
             except KeyboardInterrupt:
