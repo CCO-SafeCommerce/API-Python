@@ -250,16 +250,18 @@ def lidar_coleta_dados():
 
                         valor_lido = cpu_percent(interval=0.5)
                         componente = "CPU"
+                        situacao = 'n'
                         CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 2:
                         # Quatidade de CPU logica (vCPU)
 
                         valor_lido = cpu_count(logical=True)
                         componente = "vCPU"
+                        situacao = 'n'
                         CPU_L.text += f'\nQuantidade de CPU lógica: {valor_lido}\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
                     
                     elif metrica == 3:
                         # Porcentagem de uso da CPU por CPU (%)
@@ -269,16 +271,18 @@ def lidar_coleta_dados():
                         for index in range(len(coleta)):
                             valor_lido = coleta[index]
                             componente = f"CPU {index + 1}"
+                            situacao = 'n'
                             CPU_L.text += f'\nUso da {componente}: {valor_lido}%\n'
-                            leituras.append((id_servidor, metrica, valor_lido, componente))
+                            leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 4:
                         # Frequência de uso da CPU (MHz)
 
                         valor_lido = cpu_freq().current
                         componente = "CPU"
+                        situacao = 'n'
                         CPU_L.text += f'\nFrequência de uso da CPU: {valor_lido}MHz\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 5:
                         # Total de Memoria Ram (GB)
@@ -286,16 +290,18 @@ def lidar_coleta_dados():
                         valor_lido_bruto = virtual_memory().total
                         valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                         componente = "RAM"
+                        situacao = 'n'
                         RAM.text += f'\nTotal de memória RAM: {round(valor_lido)} GB\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 6: 
                         # Porcentagem de uso da Memoria Ram (%)
 
                         valor_lido = virtual_memory().percent
                         componente = "RAM"
+                        situacao = 'n'
                         RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 7:
                         # Total de Disco (GB)
@@ -303,32 +309,36 @@ def lidar_coleta_dados():
                         valor_lido_bruto = disk_usage('/').total
                         valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                         componente = "DISCO"
+                        situacao = 'n'
                         DISCO.text += f'\nTotal de Disco: {round(valor_lido)} GB\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 8:
                         # Porcentagem de uso de Disco (%)
 
                         valor_lido_bruto = disk_usage('/').percent
                         componente = "DISCO"
+                        situacao = 'n'
                         DISCO.text += f'\nTotal de uso de Disco: {valor_lido}%\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 9:
                         # Lido pelo Disco (ms)
 
                         valor_lido = disk_io_counters('/').read_time
                         componente = "DISCO"
+                        situacao = 'n'
                         DISCO.text += f'\nTotal Lido Pelo Disco: {valor_lido} ms\n'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     elif metrica == 10:
                         # Escrito pelo Disco (ms)
 
                         valor_lido = disk_io_counters('/').write_time
                         componente = "DISCO"
+                        situacao = 'n'
                         DISCO.text += f'\nTotal Escrito Pelo Disco: {valor_lido} ms'
-                        leituras.append((id_servidor, metrica, valor_lido, componente))
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 #Listagem de Processos                
                 cont = 0                
@@ -339,7 +349,7 @@ def lidar_coleta_dados():
                     cont += 1
 
                 if len(leituras) > 0 and controle_insert % 10 == 0:
-                    cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s)", leituras)
+                    cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, now(), %s, %s, %s)", leituras)
                     conexao.commit()
 
                     leituras.clear()
