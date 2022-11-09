@@ -78,15 +78,9 @@ def login():
                 if is_senha_correta:
                     global fk_empresa                    
                     fk_empresa = usuarios[0][2]
-                    print(usuarios)
-                    print(usuarios[0])
-                    print(usuarios[0][2])
                     print("Login realizado com sucesso.")
                     resultado = True
                     deseja_continuar = False
-
-                    
-
                 else:
                     print("Email e/ou Senha incorreto(s)!")
             else:
@@ -109,7 +103,6 @@ def cadastrar_servidor():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    print(fk_empresa)
     cursor.execute(f"INSERT INTO Servidor VALUES (null, '{modelo}', '{so}', '{mac_add}', {fk_empresa})")
     conexao.commit()
 
