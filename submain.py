@@ -8,14 +8,17 @@ import bcrypt
 from dashing import HSplit, VSplit, Text
 from time import sleep
 import requests
+import json
 
 HOST = "localhost"
 USER = "aluno"
 PASS = "sptech"
 DB = "safecommerce"
 
+
 SLA_AVISO = 120
 SLA_EMERGENCIA = 60
+TIPO_SLA = ""
 
 if os.name == 'nt':
     limpar = "cls"
@@ -173,6 +176,39 @@ def enviar_mensagem_slack(mensagem):
     # E também o link do bot criado para o envio de mensagens
     resposta = requests.post('https://hooks.slack.com/services/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', data=payload)
 
+def abrir_issue_jira():
+
+    url = "https://safe-commercefr.atlassian.net/rest/api/2/issue"
+
+    headers={
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    payload=json.dumps(
+        {
+        "fields": {
+            "project":
+            {
+                "key": "SAF"
+            },
+            "summary": "Uso de {TIPO_SLA} acima de 95%",
+            "description": "A CPU desta maquina atingiu niveis elevados de uso, recomendamos fazer verificar o que está causando está lentidão.",
+            "issuetype": {
+                "name": "Task"
+            }
+        }
+    }
+    )
+    response=requests.post(
+        url,
+        data=payload,
+        headers=headers,
+        auth=("pedrogustavofr000@gmail.com", "")
+    )
+
+    print(response.text)
+
+
 def lidar_coleta_dados():
     interface = HSplit(
         VSplit( # CPU
@@ -241,11 +277,18 @@ def lidar_coleta_dados():
                     if metrica == 1:
                         # Porcentagem de uso da CPU (%)
 
+                        TIPO_SLA = "CPU"
+
                         valor_lido = cpu_percent(interval=0.5)
                         componente = "CPU"
                         situacao = 'n'
                         CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
+
+                        if(cpu_percent >= 85 and cpu_percent < 95):
+                            enviar_mensagem_slack()
+                        elif(cpu_percent > 95):
+                            abrir_issue_jira()
 
                     elif metrica == 2:
                         # Quatidade de CPU logica (vCPU)
@@ -290,11 +333,18 @@ def lidar_coleta_dados():
                     elif metrica == 6: 
                         # Porcentagem de uso da Memoria Ram (%)
 
+                        TIPO_SLA = "RAM"
+
                         valor_lido = virtual_memory().percent
                         componente = "RAM"
                         situacao = 'n'
                         RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
+
+                        if(cpu_percent >= 85 and cpu_percent < 95):
+                            enviar_mensagem_slack()
+                        elif(cpu_percent > 95):
+                            abrir_issue_jira()
 
                     elif metrica == 7:
                         # Total de Disco (GB)
@@ -309,11 +359,18 @@ def lidar_coleta_dados():
                     elif metrica == 8:
                         # Porcentagem de uso de Disco (%)
 
+                        TIPO_SLA = "DISCO"
+
                         valor_lido_bruto = disk_usage('/').percent
                         componente = "DISCO"
                         situacao = 'n'
                         DISCO.text += f'\nTotal de uso de Disco: {valor_lido}%\n'
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
+
+                        if(cpu_percent >= 85 and cpu_percent < 95):
+                            enviar_mensagem_slack()
+                        elif(cpu_percent > 95):
+                            abrir_issue_jira()
 
                     elif metrica == 9:
                         # Lido pelo Disco (ms)
