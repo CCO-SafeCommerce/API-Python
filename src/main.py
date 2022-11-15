@@ -299,12 +299,15 @@ def lidar_coleta_dados():
                     componente = "CPU"
                     situacao = 'n'
                     CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
-                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    # if(cpu_percent >= 85 and cpu_percent < 95):
+                    # if(valor_lido >= 85 and valor_lido < 95):
+                    #     situacao = 'a'
                     #     enviar_mensagem_slack()
-                    # elif(cpu_percent > 95):
+                    # elif(valor_lido > 95):
+                    #     situacao = 'e'
                     #     abrir_issue_jira()
+
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 2:
                     # Quatidade de CPU logica (vCPU)
@@ -454,6 +457,9 @@ def lidar_coleta_dados():
                                 
                                 valor_lido += 1   
 
+                        if (valor_lido == 0):
+                            situacao = 'a'
+
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
                         
             horario = datetime.datetime.now()
@@ -466,10 +472,12 @@ def lidar_coleta_dados():
                 conexao.commit()
 
                 ultimo_insert = horario
+                print(f'Enviado para o banco às {horario_formatado}')
 
                 leituras.clear()
 
             # interface.display()
+            print('Monitorando...')
             sleep(0.5)
             
         except KeyboardInterrupt:
