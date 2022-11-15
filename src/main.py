@@ -10,6 +10,7 @@ from time import sleep
 import requests
 import json
 import datetime
+import issue_notifier
 
 HOST = "localhost"
 USER = "aluno"
@@ -106,7 +107,7 @@ def cadastrar_servidor():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    cursor.execute(f"INSERT INTO Servidor (modelo, so, mac_add, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
+    cursor.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
     conexao.commit()
 
     if cursor.rowcount == 0:
@@ -142,18 +143,21 @@ def lidar_cadastrar_servidor():
         
     return resultado
 
-def obter_id_servidor():
+def obter_dados_servidor():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    cursor.execute(f"SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'")
+    cursor.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
 
     servidores = cursor.fetchall()
 
     cursor.close()
     conexao.close() 
 
-    return servidores[0][0]
+    return {
+        "idServidor": servidores[0][0],
+        "ultimoRegistro": servidores[0][1]
+    }
 
 def obter_parametros_coleta(id_servidor):
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
@@ -254,8 +258,9 @@ def lidar_coleta_dados():
     )
 
     monitorando = True
-    controle_insert = 0
-    id_servidor = obter_id_servidor()
+    dados = obter_dados_servidor()
+    id_servidor = dados["idServidor"]
+    ultimo_insert = dados["ultimoRegistro"]
 
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
@@ -296,10 +301,10 @@ def lidar_coleta_dados():
                     CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    if(cpu_percent >= 85 and cpu_percent < 95):
-                        enviar_mensagem_slack()
-                    elif(cpu_percent > 95):
-                        abrir_issue_jira()
+                    # if(cpu_percent >= 85 and cpu_percent < 95):
+                    #     enviar_mensagem_slack()
+                    # elif(cpu_percent > 95):
+                    #     abrir_issue_jira()
 
                 elif metrica == 2:
                     # Quatidade de CPU logica (vCPU)
@@ -352,10 +357,10 @@ def lidar_coleta_dados():
                     RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    if(cpu_percent >= 85 and cpu_percent < 95):
-                        enviar_mensagem_slack()
-                    elif(cpu_percent > 95):
-                        abrir_issue_jira()
+                    # if(cpu_percent >= 85 and cpu_percent < 95):
+                    #     enviar_mensagem_slack()
+                    # elif(cpu_percent > 95):
+                    #     abrir_issue_jira()
 
                 elif metrica == 7:
                     # Total de Disco (GB)
@@ -378,10 +383,10 @@ def lidar_coleta_dados():
                     DISCO.text += f'\nTotal de uso de Disco: {valor_lido}%\n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    if(cpu_percent >= 85 and cpu_percent < 95):
-                        enviar_mensagem_slack()
-                    elif(cpu_percent > 95):
-                        abrir_issue_jira()
+                    # if(cpu_percent >= 85 and cpu_percent < 95):
+                    #     enviar_mensagem_slack()
+                    # elif(cpu_percent > 95):
+                    #     abrir_issue_jira()
 
                 elif metrica == 9:
                     # Lido pelo Disco (ms)
@@ -450,17 +455,21 @@ def lidar_coleta_dados():
                                 valor_lido += 1   
 
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
+                        
+            horario = datetime.datetime.now()
+            diferenca_segundos = abs((horario - ultimo_insert).seconds)
 
-            if len(leituras) > 0 and controle_insert % 10 == 0:
-                horario = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')[:-5]
+            if len(leituras) > 0 and (diferenca_segundos >= 10):
+                horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
-                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, " + horario +", %s, %s, %s)", leituras)
+                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
                 conexao.commit()
+
+                ultimo_insert = horario
 
                 leituras.clear()
 
-            controle_insert += 1
-            interface.display()
+            # interface.display()
             sleep(0.5)
             
         except KeyboardInterrupt:
