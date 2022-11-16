@@ -394,7 +394,7 @@ def lidar_coleta_dados():
                 elif metrica == 9:
                     # Lido pelo Disco (ms)
 
-                    valor_lido = disk_io_counters('/').read_time
+                    valor_lido = disk_io_counters().read_time
                     componente = "DISCO"
                     situacao = 'n'
                     DISCO.text += f'\nTotal Lido Pelo Disco: {valor_lido} ms\n'
@@ -403,7 +403,7 @@ def lidar_coleta_dados():
                 elif metrica == 10:
                     # Escrito pelo Disco (ms)
 
-                    valor_lido = disk_io_counters('/').write_time
+                    valor_lido = disk_io_counters().write_time
                     componente = "DISCO"
                     situacao = 'n'
                     DISCO.text += f'\nTotal Escrito Pelo Disco: {valor_lido} ms'
