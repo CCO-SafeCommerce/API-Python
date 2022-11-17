@@ -265,7 +265,7 @@ def lidar_coleta_dados():
     dados = obter_dados_servidor()
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
-
+    print(ultimo_insert)
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
@@ -492,8 +492,10 @@ def lidar_coleta_dados():
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
                         
             horario = datetime.datetime.now()
-            diferenca_segundos = abs((horario - ultimo_insert).seconds)
-
+            if ultimo_insert != None:
+                diferenca_segundos = abs((horario - ultimo_insert).seconds)
+            else:
+                diferenca_segundos = 10
             if len(leituras) > 0 and (diferenca_segundos >= 10):
                 horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
