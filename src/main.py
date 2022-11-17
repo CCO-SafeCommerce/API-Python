@@ -16,9 +16,9 @@ import json
 import datetime
 
 
-HOST = "54.90.213.140"
-USER = "root"
-PASS = "urubu100"
+HOST = "localhost"
+USER = "aluno"
+PASS = "sptech"
 DB = "safecommerce"
 
 SLA_AVISO = 120
