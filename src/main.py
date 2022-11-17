@@ -419,20 +419,9 @@ def lidar_coleta_dados():
                     temperaturaCPU = pegarTemperaturaServidor()
                     if(temperaturaCPU >= 65 and temperaturaCPU<75):
                         flag = "a" #alerta
-                        temperatura = pegarTemperaturaCidade()
-                        if(temperatura > 35):
-                            print('pode ser que continue aumentando')
-                        else:
-                            print('ALERTA: Sua CPU está quente')
                         
                     elif(temperaturaCPU>75):
                         flag = "e"    #emergencia
-                        temperatura = pegarTemperaturaCidade()
-                        
-                        if(temperatura > 35):
-                            print('sua cpu esta em temperatura de emergência e o clima está quente, talvez tenha relação')
-                        else:
-                            print('Emergência: Sua CPU está muito quente!')
                     else:
                         flag = "n"
                     
