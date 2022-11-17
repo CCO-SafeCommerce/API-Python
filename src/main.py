@@ -6,7 +6,7 @@ import mysql.connector
 from getpass import getpass
 import bcrypt
 from dashing import HSplit, VSplit, Text
-from time import sleep
+from time import sleep, strftime
 import requests
 import json
 import datetime
@@ -261,11 +261,16 @@ def lidar_coleta_dados():
     dados = obter_dados_servidor()
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
+    if str(ultimo_insert) == 'None': 
+        hours = datetime.datetime.now()
+        ultimo_insert = hours - datetime.timedelta(minutes=1)
+
+        print(ultimo_insert)
 
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    os.system(limpar)                
+    # os.system(limpar)                
     while monitorando:
         try:
             #Textos CPU
