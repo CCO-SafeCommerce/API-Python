@@ -1,20 +1,24 @@
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
+import requests
+import geocoder
+import chaves
 import getmac
 import mysql.connector
 from getpass import getpass
 import bcrypt
+import platform
 from dashing import HSplit, VSplit, Text
 from time import sleep, strftime
 import requests
 import json
 import datetime
-import issue_notifier
 
-HOST = "localhost"
-USER = "aluno"
-PASS = "sptech"
+
+HOST = "54.90.213.140"
+USER = "root"
+PASS = "urubu100"
 DB = "safecommerce"
 
 SLA_AVISO = 120
@@ -261,12 +265,16 @@ def lidar_coleta_dados():
     dados = obter_dados_servidor()
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
+<<<<<<< HEAD
     if str(ultimo_insert) == 'None': 
         hours = datetime.datetime.now()
         ultimo_insert = hours - datetime.timedelta(minutes=1)
 
         print(ultimo_insert)
 
+=======
+    print(ultimo_insert)
+>>>>>>> d66f856b1f70c8e094bce0ce26c2b4cfcaf78764
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
@@ -417,6 +425,31 @@ def lidar_coleta_dados():
                 elif metrica == 11:
                     # Temperatura da CPU
                     print('TÁ PEGANDO FOGO BICHO')
+                    temperaturaCPU = pegarTemperaturaServidor()
+                    if(temperaturaCPU >= 65 and temperaturaCPU<75):
+                        flag = "a" #alerta
+                        temperatura = pegarTemperaturaCidade()
+                        if(temperatura > 35):
+                            print('pode ser que continue aumentando')
+                        else:
+                            print('ALERTA: Sua CPU está quente')
+                        
+                    elif(temperaturaCPU>75):
+                        flag = "e"    #emergencia
+                        temperatura = pegarTemperaturaCidade()
+                        
+                        if(temperatura > 35):
+                            print('sua cpu esta em temperatura de emergência e o clima está quente, talvez tenha relação')
+                        else:
+                            print('Emergência: Sua CPU está muito quente!')
+                    else:
+                        flag = "n"
+                    
+                    valor_lido = temperaturaCPU
+                    situacao = flag
+                    componente = "TEMP CPU"
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
+
 
                 elif metrica == 12:
                     # Processos
@@ -468,8 +501,10 @@ def lidar_coleta_dados():
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
                         
             horario = datetime.datetime.now()
-            diferenca_segundos = abs((horario - ultimo_insert).seconds)
-
+            if ultimo_insert != None:
+                diferenca_segundos = abs((horario - ultimo_insert).seconds)
+            else:
+                diferenca_segundos = 10
             if len(leituras) > 0 and (diferenca_segundos >= 10):
                 horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
@@ -490,6 +525,37 @@ def lidar_coleta_dados():
     
     cursor.close()
     conexao.close()
+
+def pegarTemperaturaCidade():
+    API_KEY = chaves.API_KEY
+    cidade = geocoder.ip("me")
+    cidadeMid = str(cidade[0]).split(',')
+    cidade = cidadeMid[0].replace("[","")
+    link = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={API_KEY}&lang=pt_br"
+    requisicao = requests.get(link)
+    requisicao_dic = requisicao.json()
+    temperaturaCidade = round(requisicao_dic['main']['temp'] - 273.15,2)
+    print(temperaturaCidade)
+    return temperaturaCidade
+
+def pegarTemperaturaServidor():
+    temperaturaCPU = 0
+    if platform.system() == 'Windows':
+        import wmi
+        w = wmi.WMI(namespace="root\OpenHardwareMonitor")
+        temperature_infos = w.Sensor()
+        for sensor in temperature_infos:
+            if sensor.SensorType==u'Temperature':
+                print(sensor.Name)
+                print(sensor.Value)
+                temperaturaCPU = sensor.Value
+    else:
+        import psutil
+        temperaturas = psutil.sensors_temperatures()
+        temperaturaCPU = temperaturas['coretemp'][0][1]
+       
+    return temperaturaCPU
+
 
 def main():
     print("SafeCommerce - API Coleta de Dados\n")
