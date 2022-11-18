@@ -14,11 +14,12 @@ from time import sleep, strftime
 import requests
 import json
 import datetime
+import database
 
 
 HOST = "localhost"
-USER = "aluno"
-PASS = "sptech"
+USER = "root"
+PASS = "Vitor@2003"
 DB = "safecommerce"
 
 SLA_AVISO = 120
@@ -118,7 +119,7 @@ def cadastrar_servidor():
         print("ERRO: Falha ao cadastrar servidor")
         return servidor_foi_cadastrado
     else:
-        cursor.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7);")
+        cursor.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 12);")
         conexao.commit()
 
     servidor_foi_cadastrado = True
@@ -265,16 +266,13 @@ def lidar_coleta_dados():
     dados = obter_dados_servidor()
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
-    if str(ultimo_insert) == 'None': 
-        hours = datetime.datetime.now()
-        ultimo_insert = hours - datetime.timedelta(minutes=1)
-
-        print(ultimo_insert)
+    # print(ultimo_insert)
+       
 
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    # os.system(limpar)                
+    os.system(limpar)                
     while monitorando:
         try:
             #Textos CPU
@@ -293,6 +291,9 @@ def lidar_coleta_dados():
             PROCESSOS.text = ''
 
             parametros_coleta = obter_parametros_coleta(id_servidor)
+
+            if len(parametros_coleta) == 0:
+                print("Não há parametros de coleta")
 
             leituras = []
 
@@ -501,6 +502,8 @@ def lidar_coleta_dados():
 
                 leituras.clear()
 
+          
+
             # interface.display()
             print('Monitorando...')
             sleep(0.5)
@@ -546,7 +549,9 @@ def main():
     print("SafeCommerce - API Coleta de Dados\n")
 
     print("Verificando se servidor está cadastrado..")
-    is_servidor_cadastrado = verificar_servidor_cadastrado()
+    global mac_add
+    mac_add = getmac.get_mac_address()
+    is_servidor_cadastrado = database.is_servidor_cadastrado(mac_add)
 
     if not is_servidor_cadastrado:
         is_servidor_cadastrado = lidar_cadastrar_servidor()

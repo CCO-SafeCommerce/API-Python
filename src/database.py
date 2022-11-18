@@ -1,12 +1,13 @@
 import pymssql
 import mysql.connector
 import bcrypt
+from time import sleep
 
-AMBIENTE="desenvolvimento"
+AMBIENTE="producao"
 
 HOST_MYSQL = "localhost"
-USER_MYSQL = "aluno"
-PASS_MYSQL = "sptech"
+USER_MYSQL = "root"
+PASS_MYSQL = "Vitor@2003"
 DB = "safecommerce"
 
 HOST_MSSQL = "safecommerce.database.windows.net"
@@ -16,22 +17,32 @@ PASS_MSSQL = "1cco#grupo4"
 def is_servidor_cadastrado(mac_add):
     resultado = False
 
-    if AMBIENTE == "desenvolvimento":
-        conexao = mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB)
+    if AMBIENTE == "producao":
+        conexaoMS = pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB)
+        cursorMS = conexaoMS.cursor()
+        cursorMS.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
+        servidores_encontrados = cursorMS.fetchall()
+
+        if len(servidores_encontrados) > 0:
+            resultado = True
         
-    else:
-        conexao = pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB)
+        cursorMS.close()
+        conexaoMS.close()
 
-    cursor = conexao.cursor()
-    cursor.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
-    servidores_encontrados = cursor.fetchall()
+    if AMBIENTE == "desenvolvimento" and not resultado:
+        print("INDO PARA O MYSQL SERVER!!!")
+        sleep(2)
+        conexaoMY = mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB)
+        cursorMY = conexaoMY.cursor()
+        cursorMY.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
+        servidores_encontrados = cursorMY.fetchall()
 
-    cursor.close()
-    conexao.close()
+        if len(servidores_encontrados) > 0:
+            resultado = True
+        
+        cursorMY.close()
+        conexaoMY.close()
 
-    if len(servidores_encontrados) > 0:
-        resultado = True
-    
     return resultado
 
 def obter_fk_empresa_via_login(email, senha):
