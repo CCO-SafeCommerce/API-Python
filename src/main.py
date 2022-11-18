@@ -1,26 +1,18 @@
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
-import requests
 import geocoder
 import chaves
 import getmac
 import mysql.connector
 from getpass import getpass
 import bcrypt
-import platform
 from dashing import HSplit, VSplit, Text
 from time import sleep, strftime
 import requests
 import json
 import datetime
 import database
-
-
-HOST = "localhost"
-USER = "root"
-PASS = "Vitor@2003"
-DB = "safecommerce"
 
 SLA_AVISO = 120
 SLA_EMERGENCIA = 60
@@ -35,27 +27,17 @@ def transformar_bytes_em_gigas(value):
     return value / 1024**3
 
 def verificar_servidor_cadastrado():
-    resultado = False
-
     global mac_add
     mac_add = getmac.get_mac_address()
 
-    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
-    cursor = conexao.cursor()
+    servidor_cadastrado = database.is_servidor_cadastrado(mac_add)
 
-    cursor.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
-    servidores_encontrados = cursor.fetchall()
-
-    cursor.close()
-    conexao.close()
-
-    if len(servidores_encontrados) > 0:
-        print("Servidor já está cadastrado e foi encontrado.")
-        resultado = True
+    if servidor_cadastrado:
+        print('Servidor já está cadastrado e foi encontrado.')
     else:
-        print("Servidor não está cadastrado.")    
+        print('Servidor não está cadastrado')
 
-    return resultado
+    return servidor_cadastrado
 
 def login():
     resultado = False
@@ -549,9 +531,7 @@ def main():
     print("SafeCommerce - API Coleta de Dados\n")
 
     print("Verificando se servidor está cadastrado..")
-    global mac_add
-    mac_add = getmac.get_mac_address()
-    is_servidor_cadastrado = database.is_servidor_cadastrado(mac_add)
+    is_servidor_cadastrado = verificar_servidor_cadastrado()
 
     if not is_servidor_cadastrado:
         is_servidor_cadastrado = lidar_cadastrar_servidor()
