@@ -46,22 +46,29 @@ def is_servidor_cadastrado(mac_add):
     return resultado
 
 def obter_fk_empresa_via_login(email, senha):
+
     if AMBIENTE == "desenvolvimento":
-        conexao = mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB)
-        
-    else:
-        conexao = pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB)
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_ms:
+            cursor_ms = conexao_ms.cursor()
+            cursor_ms.execute(f'select fkEmpresa from Usuario where email = {email}')
+            fkEmpresa = cursor_ms.fetchall()
 
-    cursor = conexao.cursor()
+            cursor_ms.execute(f"select email, senha, fkEmpresa from Usuario where email = '{email}'")
+            usuarios = cursor_ms.fetchall()
 
-    cursor.execute(f"select email, senha, fkEmpresa from Usuario where email = '{email}'")
-    usuarios = cursor.fetchall()
+    
 
-    cursor.close()
-    conexao.close()
 
-    fk_empresa = 0
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_my:
+            cursor_my = conexao_my.cursor()
+            cursor_my.execute(f'select fkEmpresa from Usuario where email = {email}')
+            fk_empresa = cursor_my.fetchall()
 
+            cursor_my.execute(f"select email, senha, fkEmpresa from Usuario where email = '{email}'")
+            usuarios = cursor_my.fetchall()
+
+    
     if len(usuarios) > 0:
         is_senha_correta = bcrypt.checkpw(senha.encode('UTF-8'), usuarios[0][1].encode('UTF-8'))
 
@@ -117,19 +124,18 @@ def obter_dados_servidor(mac_add):
 
 def obter_parametros_coleta(id_servidor):
     if AMBIENTE == "desenvolvimento":
-        conexao = mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB)
-        
-    else:
-        conexao = pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB)
+        with  mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_ms:
+            cursor_ms = conexao_ms.cursor()
+            cursor_ms.execute(f'select fk_metricas from parametro where fk_servidor = {id_servidor}')
+            parametros = cursor_ms.fetchall()
 
-    cursor = conexao.cursor()
 
-    cursor.execute(f"SELECT fk_Metrica FROM Parametro WHERE fk_Servidor = {id_servidor}")
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_my:
+            cursor_my = conexao_my.cursor()
+            cursor_my.execute(f'select fk_metricas from parametro where fk_servidor = {id_servidor}')
+            parametros = cursor_ms.fetchall()
 
-    parametros = cursor.fetchall()
-
-    cursor.close()
-    conexao.close() 
 
     return parametros
 
