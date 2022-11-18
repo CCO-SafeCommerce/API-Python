@@ -137,7 +137,7 @@ def obter_parametros_coleta(id_servidor):
                 parametros = cursor_ms.fetchall()
 
     if len(parametros) == 0:
-        with  mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
             with conexao_my.cursor() as cursor_my:
                 cursor_my.execute(f'select fk_metricas from parametro where fk_servidor = {id_servidor}')
                 parametros = cursor_my.fetchall()
