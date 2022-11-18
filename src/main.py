@@ -76,7 +76,12 @@ def cadastrar_servidor():
     servidor_foi_cadastrado = database.cadastrar_servidor(modelo, so, mac_add, fk_empresa)
 
     if servidor_foi_cadastrado:
-        print("Servidor cadastrado com sucesso!")
+        parametros_definidos = database.definir_parametros_obrigatorios(mac_add)
+        if parametros_definidos:
+            print("Servidor cadastrado com sucesso!")
+            
+        else:
+            print("ERRO: Falha ao definir os parametros")
     else:
         print("ERRO: Falha ao cadastrar servidor")
 
@@ -136,7 +141,7 @@ def abrir_issue_jira():
 
 def lidar_coleta_dados():
     monitorando = True
-    dados = database.obter_dados_servidor()
+    dados = database.obter_dados_servidor(mac_add)
 
     if len(dados) == 0:
         return

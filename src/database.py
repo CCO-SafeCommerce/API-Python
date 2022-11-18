@@ -2,7 +2,7 @@ import pymssql
 import mysql.connector
 import bcrypt
 
-AMBIENTE="producao"
+AMBIENTE="desenvolvimento"
 
 HOST_MYSQL = "localhost"
 USER_MYSQL = "root"
@@ -68,7 +68,7 @@ def cadastrar_servidor(modelo, so, mac_add, fk_empresa):
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
                 cursor_ms.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
-                cursor_ms.commit()
+                conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
                     resultado_ms = True
@@ -76,7 +76,7 @@ def cadastrar_servidor(modelo, so, mac_add, fk_empresa):
     with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
         with conexao_my.cursor() as cursor_my:
             cursor_my.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
-            cursor_my.commit()
+            conexao_my.commit()
 
             if cursor_my.rowcount > 0:
                 resultado_my = True
@@ -91,7 +91,7 @@ def definir_parametros_obrigatorios(mac_add):
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
                 cursor_ms.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 12);")
-                cursor_ms.commit()
+                conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
                     resultado_ms = True
@@ -99,7 +99,7 @@ def definir_parametros_obrigatorios(mac_add):
     with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
         with conexao_my.cursor() as cursor_my:
             cursor_my.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 12);")
-            cursor_my.commit()
+            conexao_my.commit()
 
             if cursor_my.rowcount > 0:
                 resultado_my = True
@@ -115,7 +115,8 @@ def obter_dados_servidor(mac_add):
                 cursor_ms.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
                 servidores = cursor_ms.fetchall()
 
-                resultado.append(servidores[0][0], servidores[0][1])
+                resultado.append(servidores[0][0])
+                resultado.append(servidores[0][1])
 
     if len(resultado) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
@@ -123,7 +124,8 @@ def obter_dados_servidor(mac_add):
                 cursor_my.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
                 servidores = cursor_my.fetchall()
 
-                resultado.append(servidores[0][0], servidores[0][1])
+                resultado.append(servidores[0][0])
+                resultado.append(servidores[0][1])
 
     return resultado
 
@@ -133,13 +135,13 @@ def obter_parametros_coleta(id_servidor):
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f'select fk_metricas from parametro where fk_servidor = {id_servidor}')
+                cursor_ms.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor}')
                 parametros = cursor_ms.fetchall()
 
     if len(parametros) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f'select fk_metricas from parametro where fk_servidor = {id_servidor}')
+                cursor_my.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor}')
                 parametros = cursor_my.fetchall()
 
     return parametros
