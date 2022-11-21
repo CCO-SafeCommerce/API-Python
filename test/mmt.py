@@ -44,5 +44,5 @@ def test():
     print('Test MSServer')
 
 if __name__ == '__main__':
-    # main()
-    test()
+    main()
+    # test()

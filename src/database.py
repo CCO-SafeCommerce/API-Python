@@ -5,8 +5,8 @@ import bcrypt
 AMBIENTE="desenvolvimento"
 
 HOST_MYSQL = "localhost"
-USER_MYSQL = "root"
-PASS_MYSQL = "Vitor@2003"
+USER_MYSQL = "aluno"
+PASS_MYSQL = "sptech"
 DB = "safecommerce"
 
 HOST_MSSQL = "safecommerce.database.windows.net"

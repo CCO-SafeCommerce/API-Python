@@ -7,7 +7,6 @@ import getmac
 from getpass import getpass
 from time import sleep
 import requests
-import json
 import datetime
 import database
 import notifier
@@ -326,7 +325,7 @@ def lidar_coleta_dados():
                         if (valor_lido == 0):
                             situacao = 'a'
 
-                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente)) 
                         
             horario = datetime.datetime.now()
 
@@ -402,3 +401,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
