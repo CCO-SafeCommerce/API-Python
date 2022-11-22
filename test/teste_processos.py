@@ -4,8 +4,8 @@ nomes = []
 i = 0
 situacaoCpu = 'n'
 situacaoRam = 'n'
-j = 0
-while j < 5:
+i = 0
+while i < 5:
     for proc in process_iter(['pid', 'name', 'username']):
         if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
             useCpu = proc.cpu_percent()
@@ -23,12 +23,8 @@ while j < 5:
 
                 #processo = {'Nome': proc.name(), 'Pid': proc.pid, 'Cpu': useCpu, 'Ram': proc.memory_percent()}
                 processos.append(( proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
-    j+=1
-def teste(e):
-    i=0
-    while i < 10:
-        atual = i
-        i+=1 
-        return e[3]
-processos.sort(reverse=True ,key=teste)
+    i+=1
+def cpus(e):
+    return e['Cpu']
+processos.sort(reverse=True ,key=cpus)
 print(processos)
