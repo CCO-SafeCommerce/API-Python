@@ -107,11 +107,14 @@ def definir_parametros_obrigatorios(mac_add):
     return resultado_my or resultado_ms
 
 def obter_dados_servidor(mac_add):
+    global modelo_cap
+
     resultado = []
 
     if AMBIENTE == 'producao':
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
-            with conexao_ms.cursor() as cursor_ms:                
+            with conexao_ms.cursor() as cursor_ms:    
+                modelo_cap = cursor_ms.execute(f"SELECT modelo FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")            
                 cursor_ms.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
                 servidores = cursor_ms.fetchall()
 

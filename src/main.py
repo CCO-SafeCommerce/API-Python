@@ -1,42 +1,56 @@
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
-import geocoder
-import chaves
 import getmac
+import mysql.connector
 from getpass import getpass
+import bcrypt
+from dashing import HSplit, VSplit, Text
 from time import sleep
 import requests
+import json
 import datetime
 import database
 import notifier
+
+HOST = "localhost"
+USER = "aluno"
+PASS = "sptech"
+DB = "safecommerce"
+
+SLA_AVISO = 120
+SLA_EMERGENCIA = 60
 
 if os.name == 'nt':
     limpar = "cls"
 else:
     limpar = "clear"
 
-
 def transformar_bytes_em_gigas(value):
     return value / 1024**3
 
-def cpus(e):
-    return e['Cpu']
-
-
 def verificar_servidor_cadastrado():
+    resultado = False
+
     global mac_add
     mac_add = getmac.get_mac_address()
 
-    servidor_cadastrado = database.is_servidor_cadastrado(mac_add)
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
 
-    if servidor_cadastrado:
-        print('Servidor já está cadastrado e foi encontrado.')
+    cursor.execute(f"select idServidor from Servidor where enderecoMac = '{mac_add}'")
+    servidores_encontrados = cursor.fetchall()
+
+    cursor.close()
+    conexao.close()
+
+    if len(servidores_encontrados) > 0:
+        print("Servidor já está cadastrado e foi encontrado.")
+        resultado = True
     else:
-        print('Servidor não está cadastrado')
+        print("Servidor não está cadastrado.")    
 
-    return servidor_cadastrado
-
+    return resultado
 
 def login():
     resultado = False
@@ -53,18 +67,30 @@ def login():
             print("Email e Senha vazios. Consideramos que você não deseja se logar.")
             deseja_continuar = False
         else:
-            global fk_empresa
-            fk_empresa = database.obter_fk_empresa_via_login(email, senha)
+            conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+            cursor = conexao.cursor()
 
-            if fk_empresa == 0:
-                print("Email e/ou Senha incorreto(s)!")
+            cursor.execute(f"select email, senha, fkEmpresa from Usuario where email = '{email}'")
+            usuarios = cursor.fetchall()
+
+            cursor.close()
+            conexao.close()           
+
+            if len(usuarios) > 0:
+                is_senha_correta = bcrypt.checkpw(senha.encode('UTF-8'), usuarios[0][1].encode('UTF-8'))
+
+                if is_senha_correta:
+                    global fk_empresa                    
+                    fk_empresa = usuarios[0][2]
+                    print("Login realizado com sucesso.")
+                    resultado = True
+                    deseja_continuar = False
+                else:
+                    print("Email e/ou Senha incorreto(s)!")
             else:
-                print("Login realizado com sucesso.")
-                resultado = True
-                deseja_continuar = False
-
+                print("Email e/ou Senha incorreto(s)!")
+    
     return resultado
-
 
 def cadastrar_servidor():
     servidor_foi_cadastrado = False
@@ -78,58 +104,149 @@ def cadastrar_servidor():
 
     modelo = input("Modelo: ")
 
-    servidor_foi_cadastrado = database.cadastrar_servidor(
-        modelo, so, mac_add, fk_empresa)
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
 
-    if servidor_foi_cadastrado:
-        parametros_definidos = database.definir_parametros_obrigatorios(
-            mac_add)
-        if parametros_definidos:
-            print("Servidor cadastrado com sucesso!")
+    cursor.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
+    conexao.commit()
 
-        else:
-            print("ERRO: Falha ao definir os parametros")
-    else:
+    if cursor.rowcount == 0:
         print("ERRO: Falha ao cadastrar servidor")
+        return servidor_foi_cadastrado
+    else:
+        cursor.execute(f"INSERT INTO Parametro VALUES ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 2), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 5), ((SELECT idServidor FROM Servidor WHERE enderecoMac = '{mac_add}'), 7);")
+        conexao.commit()
 
+    servidor_foi_cadastrado = True
+
+    cursor.close()
+    conexao.close()
+
+    print("Servidor cadastrado com sucesso!")
     return servidor_foi_cadastrado
 
-
 def lidar_cadastrar_servidor():
+    resultado = False
+
     print("CADASTRO DE SERVIDOR")
     print("Para cadastrar servidor é necessário realizar login")
 
     is_login_feito = login()
 
     if not is_login_feito:
-        return is_login_feito
-
+        return resultado
+    
     is_cadastro_finalizado = cadastrar_servidor()
 
-    return is_cadastro_finalizado
+    if is_cadastro_finalizado:
+        resultado = True
+        
+    return resultado
 
+def obter_dados_servidor():
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
+
+    cursor.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
+
+    servidores = cursor.fetchall()
+
+    cursor.close()
+    conexao.close() 
+
+    return {
+        "idServidor": servidores[0][0],
+        "ultimoRegistro": servidores[0][1]
+    }
+
+def obter_parametros_coleta(id_servidor):
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
+
+    cursor.execute(f"SELECT fk_Metrica FROM Parametro WHERE fk_Servidor = {id_servidor}")
+
+    parametros = cursor.fetchall()
+
+    cursor.close()
+    conexao.close() 
+
+    return parametros
+
+def obter_aplicacoes(id_servidor):
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
+
+    cursor.execute(f"SELECT nome, porta FROM Aplicacao WHERE fkServidor = {id_servidor}")
+
+    aplicacoes = cursor.fetchall()
+
+    cursor.close()
+    conexao.close() 
+
+    return aplicacoes
 
 def lidar_coleta_dados():
+    interface = HSplit(
+        VSplit( # CPU
+            Text(
+                '',
+                title="Medidas da CPU",
+                border_color =4,
+                color= 7)   
+        ),
+        VSplit( #RAM
+            Text(
+                '',
+                title="Medidas da RAM",
+                border_color=3,
+                color=7
+            ),
+            Text(
+                '',
+                title="Medidas do Disco",
+                border_color=1,
+                color=7
+            )
+        ),
+        VSplit( #PROCESSOS
+            Text(
+                '',
+                title="Listagem de Processos",
+                border_color=2,
+                color=7
+            )
+        )
+    )
+
     monitorando = True
-    dados = database.obter_dados_servidor(mac_add)
+    dados = obter_dados_servidor()
+    id_servidor = dados["idServidor"]
+    ultimo_insert = dados["ultimoRegistro"]
 
-    if len(dados) == 0:
-        return
+    conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
+    cursor = conexao.cursor()
 
-    id_servidor = dados[0]
-    ultimo_insert = dados[1]
-
-    os.system(limpar)
+    os.system(limpar)                
     while monitorando:
         try:
-            parametros_coleta = database.obter_parametros_coleta(id_servidor)
+            #Textos CPU
+            CPU_L = interface.items[0].items[0]
+            CPU_L.text = ''            
 
-            if len(parametros_coleta) == 0:
-                print("Não há parametros de coleta")
+            #Textos RAM
+            RAM = interface.items[1].items[0]
+            RAM.text = ''
+
+            #Textos DISCO
+            DISCO = interface.items[1].items[1]
+            DISCO.text = ''
+
+            PROCESSOS = interface.items[2].items[0]
+            PROCESSOS.text = ''
+
+            parametros_coleta = obter_parametros_coleta(id_servidor)
 
             leituras = []
-            processos = []
-
 
             for parametro in parametros_coleta:
                 metrica = parametro[0]
@@ -137,24 +254,27 @@ def lidar_coleta_dados():
                 if metrica == 1:
                     # Porcentagem de uso da CPU (%)
 
+                    TIPO_SLA = "CPU"
+
                     valor_lido = cpu_percent(interval=0.5)
                     componente = "CPU"
                     situacao = 'n'
+                    CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
 
-                    # verificar SLAs de alertas
+                    mensagem = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso de {}. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add, valor_lido)
+                    summary = "CPU acima de 95 de uso"
+                    description = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso {}. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
 
-                    if (valor_lido >= 85 and valor_lido < 95):
+                    if(valor_lido >= 85 and valor_lido < 95):
                         situacao = 'a'
-                        notifier.enviar_mensagem_slack()
-
-                    elif (valor_lido > 95):
+                        notifier.enviar_mensagem_slack(mensagem)
+                        
+                    elif(valor_lido > 95):
                         situacao = 'e'
-                        notifier.TIPO_SLA = "CPU"
-                        notifier.create_issue()
-                        notifier.enviar_mensagem_slack()
+                        notifier.create_issue(summary, description)
+                        notifier.enviar_mensagem_slack(mensagem)
 
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 2:
                     # Quatidade de CPU logica (vCPU)
@@ -162,42 +282,39 @@ def lidar_coleta_dados():
                     valor_lido = cpu_count(logical=True)
                     componente = "vCPU"
                     situacao = 'n'
-
-                    # verificar SLAs de alertas
-
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
-
+                    CPU_L.text += f'\nQuantidade de CPU lógica: {valor_lido}\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
+                
                 elif metrica == 3:
                     # Porcentagem de uso da CPU por CPU (%)
 
                     coleta = cpu_percent(interval=0.5, percpu=True)
 
-                    qtd_acima_a = 0
-                    qtd_acima_e = 0
-
                     for index in range(len(coleta)):
-                        if (coleta[index] >= 85 and coleta[index] <= 95):
+                        if(coleta[index] >= 85 and coleta[index] <= 95):
                             qtd_acima_a = qtd_acima_a + 1
-                        elif (coleta[index] > 95):
+                        elif(coleta[index] > 95):
                             qtd_acima_e = qtd_acima_e + 1
                         valor_lido = coleta[index]
                         componente = f"CPU {index + 1}"
                         situacao = 'n'
-                        leituras.append(
-                            (id_servidor, metrica, valor_lido, situacao, componente))
-
-                    if (qtd_acima_a > qtd_acima_e):
-                        situacao = "a"
-                        notifier.enviar_mensagem_slack()
-
-                    elif (qtd_acima_e > qtd_acima_a and qtd_acima_e == qtd_acima_a):
-                        situacao = "e"
-                        notifier.TIPO_SLA = "CPU"
-                        notifier.enviar_mensagem_slack()
-                        notifier.create_issue()
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                         # verificar SLAs de alertas
+
+                    summary = "Mais de duas CPUs acima de 95 de uso"
+                    description = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiu elevados niveis de uso. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add)
+                    mensagem = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+
+
+                    if(qtd_acima_a > qtd_acima_e):
+                        situacao = "a"
+                        notifier.enviar_mensagem_slack(mensagem)
+
+                    elif(qtd_acima_e > qtd_acima_a and qtd_acima_e == qtd_acima_a):
+                        situacao = "e"
+                        notifier.enviar_mensagem_slack(mensagem)
+                        notifier.create_issue(summary, description)
 
                 elif metrica == 4:
                     # Frequência de uso da CPU (MHz)
@@ -205,11 +322,8 @@ def lidar_coleta_dados():
                     valor_lido = cpu_freq().current
                     componente = "CPU"
                     situacao = 'n'
-
-                    # verificar SLAs de alertas
-
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    CPU_L.text += f'\nFrequência de uso da CPU: {valor_lido}MHz\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 5:
                     # Total de Memoria Ram (GB)
@@ -218,29 +332,32 @@ def lidar_coleta_dados():
                     valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                     componente = "RAM"
                     situacao = 'n'
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    RAM.text += f'\nTotal de memória RAM: {round(valor_lido)} GB\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                elif metrica == 6:
+                elif metrica == 6: 
                     # Porcentagem de uso da Memoria Ram (%)
+
+                    TIPO_SLA = "RAM"
 
                     valor_lido = virtual_memory().percent
                     componente = "RAM"
                     situacao = 'n'
+                    RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    # verificar SLAs de alertas
-                    if (valor_lido >= 85 and valor_lido < 95):
+                    summary = "Uso de memória RAM em {}%".format(valor_lido)
+                    description = "A memória RAM do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
+                    mensagem = "A memória RAM do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+
+                    if(valor_lido >= 85 and valor_lido < 95):
                         situacao = "a"
-                        notifier.enviar_mensagem_slack()
+                        notifier.enviar_mensagem_slack(mensagem)
 
-                    elif (valor_lido > 95):
+                    elif(valor_lido > 95):
                         situacao = "e"
-                        notifier.TIPO_SLA = "memória RAM"
-                        notifier.enviar_mensagem_slack()
-                        notifier.create_issue()
-
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                        notifier.enviar_mensagem_slack(summary, description)
+                        notifier.create_issue(mensagem)
 
                 elif metrica == 7:
                     # Total de Disco (GB)
@@ -249,94 +366,69 @@ def lidar_coleta_dados():
                     valor_lido = transformar_bytes_em_gigas(valor_lido_bruto)
                     componente = "DISCO"
                     situacao = 'n'
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    DISCO.text += f'\nTotal de Disco: {round(valor_lido)} GB\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 8:
                     # Porcentagem de uso de Disco (%)
 
+                    TIPO_SLA = "DISCO"
+
                     valor_lido_bruto = disk_usage('/').percent
                     componente = "DISCO"
                     situacao = 'n'
+                    DISCO.text += f'\nTotal de uso de Disco: {valor_lido}%\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    # verificar SLAs de alertas
-                    if (valor_lido >= 85 and valor_lido < 95):
+                    summary = "Uso de memória em DISCO atingiu uso de {}%".format(valor_lido)
+                    description = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
+                    mensagem = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+
+                    if(valor_lido >= 85 and valor_lido < 95):
                         situacao = "a"
-                        notifier.enviar_mensagem_slack()
+                        notifier.enviar_mensagem_slack(mensagem)
 
-                    elif (valor_lido > 95):
+                    elif(valor_lido > 95):
                         situacao = "e"
-                        notifier.TIPO_SLA = "Disco"
-                        notifier.enviar_mensagem_slack()
-                        notifier.create_issue()
-
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                        notifier.enviar_mensagem_slack(mensagem)
+                        notifier.create_issue(summary,description)
 
                 elif metrica == 9:
                     # Lido pelo Disco (ms)
 
-                    valor_lido = disk_io_counters().read_time
+                    valor_lido = disk_io_counters('/').read_time
                     componente = "DISCO"
                     situacao = 'n'
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    DISCO.text += f'\nTotal Lido Pelo Disco: {valor_lido} ms\n'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 10:
                     # Escrito pelo Disco (ms)
 
-                    valor_lido = disk_io_counters().write_time
+                    valor_lido = disk_io_counters('/').write_time
                     componente = "DISCO"
                     situacao = 'n'
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    DISCO.text += f'\nTotal Escrito Pelo Disco: {valor_lido} ms'
+                    leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 11:
                     # Temperatura da CPU
-                    temperaturaCPU = pegarTemperaturaServidor()
-                    if (temperaturaCPU >= 65 and temperaturaCPU < 75):
-                        flag = "a"  # alerta
-                    elif (temperaturaCPU > 75):
-                        flag = "e"  # emergencia
-                    else:
-                        flag = "n"
-
-                    valor_lido = temperaturaCPU
-                    situacao = flag
-                    componente = "TEMP CPU"
-                    leituras.append(
-                        (id_servidor, metrica, valor_lido, situacao, componente))
+                    print('TÁ PEGANDO FOGO BICHO')
 
                 elif metrica == 12:
-                    nomes = []
-                    situacaoCpu = 'n'
-                    situacaoRam = 'n'
+                    # Processos
+
+                    #Listagem de Processos
+                    cont = 0                
                     for proc in process_iter(['pid', 'name', 'username']):
-                        if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
-                            useCpu = proc.cpu_percent()
-                            memoryRam = proc.memory_percent()
-                            
-                            if useCpu > 0:
-                                nomes.append(proc.name())
-                            
-                                if useCpu > 70 and useCpu < 90:
-                                    situacaoCpu = 'a'
-                                elif useCpu >= 90:
-                                    situacaoCpu = 'e'
-                            
-                                if memoryRam > 75 and memoryRam < 85:
-                                    situacaoRam = 'a'
-                                elif memoryRam >= 85:
-                                    situacaoRam = 'e'
-                                
-                                #processo = {'fkServidor': id_servidor, 'Pid': proc.pid, 'Nome': proc.name(), 'Cpu': useCpu
-                                #, 'SituacaoCpu': situacaoCpu,'Ram': memoryRam, 'SituacaoRam': situacaoRam}
-                                processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
-                    #processos.sort(reverse=True, key=cpus)
+                        if cont < 5:
+                            PROCESSOS.text += f'\nNome: {proc.name()}   Pid: {proc.pid} \n'
+
+                        cont += 1
 
                 elif metrica == 13:
                     # Conexões ativas TCP
-                    aplicacoes = database.obter_aplicacoes(id_servidor)
+                    aplicacoes = obter_aplicacoes(id_servidor)
                     network = net_connections(kind='inet')
 
                     for app in aplicacoes:
@@ -353,81 +445,48 @@ def lidar_coleta_dados():
                                 raddr = f'{conn.raddr.ip}:{conn.raddr.port}'
 
                             if (
-                                conn.laddr.port == app[1]
-                                and (conn.status != CONN_LISTEN
-                                    or (conn.status == CONN_LISTEN
-                                    and not already_listen))
-                                and raddrs.issuperset(set(raddr))
+                                conn.laddr.port == app[1]  
+                                and (conn.status != CONN_LISTEN 
+                                    or (conn.status == CONN_LISTEN 
+                                    and not already_listen)) 
+                                and raddrs.issuperset(set(raddr))                               
                             ):
                                 if (raddr != ''):
                                     raddrs.add(raddr)
 
                                 if (conn.status == CONN_LISTEN):
                                     already_listen = True
-
-                                valor_lido += 1
+                                
+                                valor_lido += 1   
 
                         if (valor_lido == 0):
                             situacao = 'a'
 
-                        leituras.append(
-                            (id_servidor, metrica, valor_lido, situacao, componente))
-
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
+                        
             horario = datetime.datetime.now()
+            diferenca_segundos = abs((horario - ultimo_insert).seconds)
 
-            if ultimo_insert != None:
-                diferenca_segundos = abs((horario - ultimo_insert).seconds)
-            else:
-                diferenca_segundos = 10
-
-            if len(leituras) > 0 and len(processos) > 0 and (diferenca_segundos >= 10):
+            if len(leituras) > 0 and (diferenca_segundos >= 10):
                 horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
-                ok = database.registrar_leituras(leituras, horario_formatado, processos)
+                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
+                conexao.commit()
 
-                if ok:
-                    ultimo_insert = horario
-                    print(f'Enviado para o banco às {horario_formatado}')
-                else:
-                    print(f'Falha ao enviar as leituras às {horario_formatado}')
+                ultimo_insert = horario
+                print(f'Enviado para o banco às {horario_formatado}')
 
-            leituras.clear()
-            processos.clear()
+                leituras.clear()
+
+            # interface.display()
             print('Monitorando...')
             sleep(0.5)
             
         except KeyboardInterrupt:
             monitorando = False
-
-def pegarTemperaturaCidade():
-    API_KEY = chaves.API_KEY
-    cidade = geocoder.ip("me")
-    cidadeMid = str(cidade[0]).split(',')
-    cidade = cidadeMid[0].replace("[","")
-    link = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={API_KEY}&lang=pt_br"
-    requisicao = requests.get(link)
-    requisicao_dic = requisicao.json()
-    temperaturaCidade = round(requisicao_dic['main']['temp'] - 273.15,2)
-    print(temperaturaCidade)
-    return temperaturaCidade
-
-def pegarTemperaturaServidor():
-    temperaturaCPU = 0
-    if platform.system() == 'Windows':
-        import wmi
-        w = wmi.WMI(namespace="root\OpenHardwareMonitor")
-        temperature_infos = w.Sensor()
-        for sensor in temperature_infos:
-            if sensor.SensorType==u'Temperature':
-                print(sensor.Name)
-                print(sensor.Value)
-                temperaturaCPU = sensor.Value
-    else:
-        import psutil
-        temperaturas = psutil.sensors_temperatures()
-        temperaturaCPU = temperaturas['coretemp'][0][1]
-       
-    return temperaturaCPU
+    
+    cursor.close()
+    conexao.close()
 
 def main():
     print("SafeCommerce - API Coleta de Dados\n")
@@ -448,4 +507,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

@@ -1,8 +1,6 @@
 import requests
 import json
 
-TIPO_SLA = ""
-
 def enviar_mensagem_slack(mensagem):
     #Variável que define o tipo de dados que estamos enviando. E que envie a solicitação e poste está mensagem
     payload = '{"text":"%s"}' % mensagem
@@ -11,7 +9,7 @@ def enviar_mensagem_slack(mensagem):
     # E também o link do bot criado para o envio de mensagens
     requests.post('https://hooks.slack.com/services/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', data=payload)
 
-def create_issue():
+def create_issue(summary, description):
     url = "https://safe-commercefr.atlassian.net/rest/api/2/issue"
 
     headers={
@@ -25,8 +23,8 @@ def create_issue():
             {
                 "key": "SAF"
             },
-            "summary": "Uso de {} acima de 95%".format(TIPO_SLA),
-            "description": "Está máquina está atingindo elevados níveis de uso de {}. Por favor verifique o que está causando este alto consumo de hardware.".format(TIPO_SLA),
+            "summary": summary,
+            "description": description,
             "issuetype": {
                 "name": "Task"
             }
