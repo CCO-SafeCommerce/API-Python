@@ -163,7 +163,7 @@ def obter_aplicacoes(id_servidor):
 
     return aplicacoes
 
-def registrar_leituras(leituras, horario_formatado):
+def registrar_leituras(leituras, horario_formatado, processos):
     resultado_ms = False
     resultado_my = False
 
@@ -171,6 +171,7 @@ def registrar_leituras(leituras, horario_formatado):
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:                
                 cursor_ms.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
+                cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %d, %s, %d, %s)", processos)
                 conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
@@ -179,6 +180,7 @@ def registrar_leituras(leituras, horario_formatado):
     with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
         with conexao_my.cursor() as cursor_my:
             cursor_my.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
+            cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %d, %s, %d, %s)", processos)
             conexao_my.commit()
 
             if cursor_my.rowcount > 0:
