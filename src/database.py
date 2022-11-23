@@ -107,28 +107,28 @@ def definir_parametros_obrigatorios(mac_add):
     return resultado_my or resultado_ms
 
 def obter_dados_servidor(mac_add):
-    global modelo_cap
-
     resultado = []
 
     if AMBIENTE == 'producao':
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:    
-                modelo_cap = cursor_ms.execute(f"SELECT modelo FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")            
-                cursor_ms.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
+    
+                cursor_ms.execute(f"SELECT idServidor, modelo, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
                 servidores = cursor_ms.fetchall()
 
                 resultado.append(servidores[0][0])
                 resultado.append(servidores[0][1])
+                resultado.append(servidores[0][2])
 
     if len(resultado) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
+                cursor_my.execute(f"SELECT idServidor, modelo, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
                 servidores = cursor_my.fetchall()
 
                 resultado.append(servidores[0][0])
                 resultado.append(servidores[0][1])
+                resultado.append(servidores[0][2])
 
     return resultado
 
@@ -174,7 +174,7 @@ def registrar_leituras(leituras, horario_formatado, processos):
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DB) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:                
                 cursor_ms.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
-                cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %d, %s, %d, %s)", processos)
+                cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %.2f, %s, %.2f, %s)", processos)
                 conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
@@ -183,7 +183,7 @@ def registrar_leituras(leituras, horario_formatado, processos):
     with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DB) as conexao_my:
         with conexao_my.cursor() as cursor_my:
             cursor_my.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
-            cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %d, %s, %d, %s)", processos)
+            cursor_my.executemany("INSERT INTO Processo VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s, %s, %s)", processos)
             conexao_my.commit()
 
             if cursor_my.rowcount > 0:

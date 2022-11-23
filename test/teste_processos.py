@@ -24,7 +24,4 @@ while i < 5:
                 #processo = {'Nome': proc.name(), 'Pid': proc.pid, 'Cpu': useCpu, 'Ram': proc.memory_percent()}
                 processos.append(( proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
     i+=1
-def cpus(e):
-    return e['Cpu']
-processos.sort(reverse=True ,key=cpus)
 print(processos)

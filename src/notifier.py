@@ -37,5 +37,3 @@ def create_issue(summary, description):
         headers=headers,
         auth=("pedrogustavofr000@gmail.com", "9Wi7zK0W9W4ZrUCZiN4QB4F6")
     )
-
-    print(response.text)

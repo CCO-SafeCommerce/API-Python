@@ -147,7 +147,7 @@ def obter_dados_servidor():
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
 
-    cursor.execute(f"SELECT idServidor, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
+    cursor.execute(f"SELECT idServidor, modelo, ultimoRegistro FROM visaoGeralServidores WHERE enderecoMac = '{mac_add}'")
 
     servidores = cursor.fetchall()
 
@@ -156,7 +156,8 @@ def obter_dados_servidor():
 
     return {
         "idServidor": servidores[0][0],
-        "ultimoRegistro": servidores[0][1]
+        "modelo": servidores[0][1],
+        "ultimoRegistro": servidores[0][2]
     }
 
 def obter_parametros_coleta(id_servidor):
@@ -220,6 +221,7 @@ def lidar_coleta_dados():
 
     monitorando = True
     dados = obter_dados_servidor()
+    modelo_cep = dados["modelo"]
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
 
@@ -261,9 +263,9 @@ def lidar_coleta_dados():
                     situacao = 'n'
                     CPU_L.text += f'\nPorcentagem de uso: {valor_lido}%\n'
 
-                    mensagem = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso de {}. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add, valor_lido)
+                    mensagem = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso de {}. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(modelo_cep, mac_add, valor_lido)
                     summary = "CPU acima de 95 de uso"
-                    description = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso {}. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
+                    description = "O uso de CPU do servidor de modelo {} e endereço mac {} atingiu niveis de uso {}. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(modelo_cep, mac_add, valor_lido)
 
                     if(valor_lido >= 85 and valor_lido < 95):
                         situacao = 'a'
@@ -303,8 +305,8 @@ def lidar_coleta_dados():
                         # verificar SLAs de alertas
 
                     summary = "Mais de duas CPUs acima de 95 de uso"
-                    description = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiu elevados niveis de uso. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add)
-                    mensagem = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+                    description = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiu elevados niveis de uso. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(modelo_cep, mac_add)
+                    mensagem = "Mais de duas CPUs do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(modelo_cep, mac_add)
 
 
                     if(qtd_acima_a > qtd_acima_e):
@@ -346,9 +348,9 @@ def lidar_coleta_dados():
                     RAM.text += f'\nTotal de uso de memória RAM: {valor_lido}%\n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
-                    summary = "Uso de memória RAM em {}%".format(valor_lido)
-                    description = "A memória RAM do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
-                    mensagem = "A memória RAM do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+                    summary = "Uso de memória RAM em %s%".format(valor_lido)
+                    description = "A memória RAM do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(modelo_cep, mac_add, valor_lido)
+                    mensagem = "A memória RAM do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(modelo_cep, mac_add)
 
                     if(valor_lido >= 85 and valor_lido < 95):
                         situacao = "a"
@@ -381,8 +383,8 @@ def lidar_coleta_dados():
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
 
                     summary = "Uso de memória em DISCO atingiu uso de {}%".format(valor_lido)
-                    description = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(database.modelo_cap, mac_add, valor_lido)
-                    mensagem = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(database.modelo_cap, mac_add)
+                    description = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiu um uso de {}%. Recomendamos uma verificação do motivo deste nivel de uso elevado.".format(modelo_cep, mac_add, valor_lido)
+                    mensagem = "A memória em DISCO do servidor de modelo {} e endereço mac {} atingiram elevados niveis de uso acima de 85%. Por favor verifique o que está ocasinando este nivel de uso antes que a situação do componente se agrave.".format(modelo_cep, mac_add)
 
                     if(valor_lido >= 85 and valor_lido < 95):
                         situacao = "a"
@@ -416,16 +418,30 @@ def lidar_coleta_dados():
                     print('TÁ PEGANDO FOGO BICHO')
 
                 elif metrica == 12:
-                    # Processos
-
-                    #Listagem de Processos
-                    cont = 0                
-                    for proc in process_iter(['pid', 'name', 'username']):
-                        if cont < 5:
-                            PROCESSOS.text += f'\nNome: {proc.name()}   Pid: {proc.pid} \n'
-
-                        cont += 1
-
+                    useCpu = 0
+                    memoryRam = 0
+                    processos = []
+                    nomes = []
+                    situacaoCpu = 'n'
+                    situacaoRam = 'n'
+                    i = 0
+                    while i < 5:
+                        for proc in process_iter(['pid', 'name', 'username']):
+                            if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
+                                useCpu = proc.cpu_percent()
+                                memoryRam = proc.memory_percent()
+                                if useCpu >= 1:
+                                    nomes.append(proc.name())
+                                    if useCpu > 70 and useCpu < 90:
+                                        situacaoCpu = 'a'
+                                    elif useCpu >= 90:
+                                        situacaoCpu = 'e'
+                                    if memoryRam > 75 and memoryRam < 85:
+                                        situacaoRam = 'a'
+                                    elif memoryRam >= 85:
+                                        situacaoRam = 'e'
+                                    processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
+                        i+=1                                        
                 elif metrica == 13:
                     # Conexões ativas TCP
                     aplicacoes = obter_aplicacoes(id_servidor)
@@ -465,23 +481,26 @@ def lidar_coleta_dados():
                         leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
                         
             horario = datetime.datetime.now()
-            diferenca_segundos = abs((horario - ultimo_insert).seconds)
 
-            if len(leituras) > 0 and (diferenca_segundos >= 10):
+            if ultimo_insert != None:
+                diferenca_segundos = abs((horario - ultimo_insert).seconds)
+            else:
+                diferenca_segundos = 10
+
+            if len(leituras) > 0 and len(processos) > 0 and (diferenca_segundos >= 10):
                 horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
-                cursor.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
-                conexao.commit()
+                ok = database.registrar_leituras(leituras, horario_formatado, processos)
 
-                ultimo_insert = horario
-                print(f'Enviado para o banco às {horario_formatado}')
+                if ok:
+                    ultimo_insert = horario
+                    print(f'Leituras enviadas às {horario_formatado}')
 
-                leituras.clear()
-
-            # interface.display()
+            leituras.clear()
+            processos.clear()
             print('Monitorando...')
             sleep(0.5)
-            
+          
         except KeyboardInterrupt:
             monitorando = False
     
