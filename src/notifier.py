@@ -7,7 +7,7 @@ def enviar_mensagem_slack(mensagem):
     
     # Variável que irá obter reposta que iremos receber da API. Logo depois do sinal de igual tem a chamada da bilioteca de solicitaçao. 
     # E também o link do bot criado para o envio de mensagens
-    requests.post('https://hooks.slack.com/services/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', data=payload)
+    requests.post('https://hooks.slack.com/services/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', data=payload)
 
 def create_issue(summary, description):
     url = "https://safe-commercefr.atlassian.net/rest/api/2/issue"
