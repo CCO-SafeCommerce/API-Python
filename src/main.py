@@ -224,6 +224,7 @@ def lidar_coleta_dados():
     modelo_cep = dados["modelo"]
     id_servidor = dados["idServidor"]
     ultimo_insert = dados["ultimoRegistro"]
+    processos = []
 
     conexao = mysql.connector.connect(host=HOST, user=USER, password=PASS, database=DB)
     cursor = conexao.cursor()
@@ -420,7 +421,6 @@ def lidar_coleta_dados():
                 elif metrica == 12:
                     useCpu = 0
                     memoryRam = 0
-                    processos = []
                     nomes = []
                     situacaoCpu = 'n'
                     situacaoRam = 'n'
@@ -488,7 +488,7 @@ def lidar_coleta_dados():
             else:
                 diferenca_segundos = 10
 
-            if len(leituras) > 0 and len(processos) > 0 and (diferenca_segundos >= 10):
+            if len(leituras) > 0  and (diferenca_segundos >= 10):
                 horario_formatado = horario.strftime('%Y-%m-%d %X.%f')[:-5]
 
                 ok = database.registrar_leituras(leituras, horario_formatado, processos)
