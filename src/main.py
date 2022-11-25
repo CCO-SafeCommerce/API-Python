@@ -441,7 +441,8 @@ def lidar_coleta_dados():
                                     elif memoryRam >= 85:
                                         situacaoRam = 'e'
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
-                        i+=1                                        
+                        i+=1     
+                        #                                   
                 elif metrica == 13:
                     # Conexões ativas TCP
                     aplicacoes = obter_aplicacoes(id_servidor)
