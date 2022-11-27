@@ -31,7 +31,7 @@ def create_issue(summary, description):
         }
     }
     )
-    response=requests.post(
+    requests.post(
         url,
         data=payload,
         headers=headers,
