@@ -296,7 +296,7 @@ def lidar_coleta_dados():
                 elif metrica == 9:
                     # Lido pelo Disco (ms)
 
-                    valor_lido = disk_io_counters('/').read_time
+                    valor_lido = disk_io_counters().read_bytes
                     componente = "DISCO"
                     situacao = 'n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
@@ -304,7 +304,7 @@ def lidar_coleta_dados():
                 elif metrica == 10:
                     # Escrito pelo Disco (ms)
 
-                    valor_lido = disk_io_counters('/').write_time
+                    valor_lido = disk_io_counters().write_bytes
                     componente = "DISCO"
                     situacao = 'n'
                     leituras.append((id_servidor, metrica, valor_lido, situacao, componente))
@@ -349,7 +349,7 @@ def lidar_coleta_dados():
                                         situacaoRam = 'e'
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
                         i+=1     
-                        #                                   
+                                                          
                 elif metrica == 13:
                     # Conexões ativas TCP
                     aplicacoes = database.obter_aplicacoes(id_servidor)
