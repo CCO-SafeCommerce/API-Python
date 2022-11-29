@@ -10,6 +10,7 @@ import requests
 import datetime
 import database
 import notifier
+import requests
 
 if os.name == 'nt':
     limpar = "cls"
@@ -70,9 +71,11 @@ def cadastrar_servidor():
     print("Sistema Operacional: {}".format(so))
 
     modelo = input("Modelo: ")
-
+    response = requests.get('https://api64.ipify.org?format=json').json()    
+    ip = response["ip"]
+    
     servidor_foi_cadastrado = database.cadastrar_servidor(
-        modelo, so, mac_add, fk_empresa)
+        modelo, so, mac_add, fk_empresa, ip)
 
     if servidor_foi_cadastrado:
         parametros_definidos = database.definir_parametros_obrigatorios(

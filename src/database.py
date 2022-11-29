@@ -60,14 +60,14 @@ def obter_fk_empresa_via_login(email, senha):
 
     return fk_empresa
 
-def cadastrar_servidor(modelo, so, mac_add, fk_empresa):
+def cadastrar_servidor(modelo, so, mac_add, fk_empresa, ip):
     resultado_ms = False
     resultado_my = False
 
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa})")
+                cursor_ms.execute(f"INSERT INTO Servidor (modelo, so, enderecoMac, fkEmpresa, ipServidor) VALUES ('{modelo}', '{so}', '{mac_add}', {fk_empresa}, '{ip}');")
                 conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
