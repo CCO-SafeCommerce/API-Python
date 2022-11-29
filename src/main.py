@@ -1,3 +1,4 @@
+from concurrent.futures import process
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
@@ -333,11 +334,11 @@ def lidar_coleta_dados():
                     situacaoRam = 'n'
                     i = 0
                     while i < 5:
-                        for proc in process_iter(['pid', 'name', 'username']):
+                        for proc in process_iter(['pid', 'name']):
                             if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
                                 useCpu = proc.cpu_percent()
                                 memoryRam = proc.memory_percent()
-                                if useCpu >= 1:
+                                if useCpu > 0:
                                     nomes.append(proc.name())
                                     if useCpu > 70 and useCpu < 90:
                                         situacaoCpu = 'a'
@@ -348,6 +349,7 @@ def lidar_coleta_dados():
                                     elif memoryRam >= 85:
                                         situacaoRam = 'e'
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
+                                
                         i+=1     
                                                           
                 elif metrica == 13:
@@ -386,8 +388,20 @@ def lidar_coleta_dados():
                         if (valor_lido == 0):
                             situacao = 'a'
 
-                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))                    
-                        
+                        leituras.append((id_servidor, metrica, valor_lido, situacao, componente))  
+
+                elif metrica == 14:
+                    processos_desejaveis = database.obter_processos_desejaveis(id_servidor)
+                    nomes = []
+                    x = 0
+                    i = 0
+                    while i < 5:
+                        for proc in process_iter(['pid', 'name']):
+                            if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
+                                for x in range(len(processos_desejaveis)):
+                                    if(proc.name == processos_desejaveis[x]):
+                                        print("oi") 
+      
             horario = datetime.datetime.now()
 
             if ultimo_insert != None:

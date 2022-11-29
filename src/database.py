@@ -132,6 +132,24 @@ def obter_dados_servidor(mac_add):
 
     return resultado
 
+def obter_processos_desejaveis():
+    processos_desejaveis = []
+
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
+            with conexao_ms.cursor() as cursor_ms:
+                cursor_ms.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor};')
+                processos_desejaveis = cursor_ms.fetchall()
+
+    if len(processos_desejaveis) == 0:
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
+            with conexao_my.cursor() as cursor_my:
+                cursor_my.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor};')
+                processos_desejaveis = cursor_my.fetchall()
+
+    return processos_desejaveis
+    
+
 def obter_parametros_coleta(id_servidor):
     parametros = []
 
@@ -190,3 +208,4 @@ def registrar_leituras(leituras, horario_formatado, processos):
                 resultado_my = True
 
     return resultado_my or resultado_ms
+
