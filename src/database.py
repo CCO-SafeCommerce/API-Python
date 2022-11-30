@@ -215,11 +215,11 @@ def capturarPids(id_servidor) :
             with conexao_ms.cursor() as cursor_ms:                
                 cursor_ms.execute(f"select pid from KillPids where fkServidor = {id_servidor}")
                 pids = cursor_ms.fetchall()
-
-    with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
-        with conexao_my.cursor() as cursor_my:
-            cursor_my.execute(f"select pid from KillPids where fkServidor = {id_servidor}")
-            pids = cursor_my.fetchall()
+    else:
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
+            with conexao_my.cursor() as cursor_my:
+                cursor_my.execute(f"select pid from KillPids where fkServidor = {id_servidor}")
+                pids = cursor_my.fetchall()
     
     return pids
 
