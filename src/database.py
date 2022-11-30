@@ -2,7 +2,7 @@ import pymssql
 import mysql.connector
 import bcrypt
 
-AMBIENTE = "desenvolvimento"
+AMBIENTE = "producao"
 DATABASE = "safecommmerce"
 
 HOST_MYSQL = "localhost"
@@ -192,7 +192,7 @@ def registrar_leituras(leituras, horario_formatado, processos):
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:                
                 cursor_ms.executemany("INSERT INTO Leitura VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s)", leituras)
-                cursor_ms.executemany("INSERT INTO Processo VALUES (%i, %i, '" + horario_formatado +"', %s, %.2f, %s, %.2f, %s)", processos)
+                cursor_ms.executemany("INSERT INTO Processo VALUES (%s, %s, '" + horario_formatado +"', %s, %s, %s, %s, %s)", processos)
                 conexao_ms.commit()
 
                 if cursor_ms.rowcount > 0:
@@ -208,4 +208,31 @@ def registrar_leituras(leituras, horario_formatado, processos):
                 resultado_my = True
 
     return resultado_my or resultado_ms
+
+def capturarPids(id_servidor) :
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
+            with conexao_ms.cursor() as cursor_ms:                
+                cursor_ms.execute(f"select pid from KillPids where fkServidor = {id_servidor}")
+                pids = cursor_ms.fetchall()
+
+    with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
+        with conexao_my.cursor() as cursor_my:
+            cursor_my.execute(f"select pid from KillPids where fkServidor = {id_servidor}")
+            pids = cursor_my.fetchall()
+    
+    return pids
+
+def deletarPids(id_servidor, pid) :
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
+            with conexao_ms.cursor() as cursor_ms:                
+                cursor_ms.execute(f"delete from KillPids where fkServidor = {id_servidor} and pid = {pid}")
+            conexao_ms.commit()
+    else:
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
+            with conexao_my.cursor() as cursor_my:
+                cursor_my.execute(f"delete from KillPids where fkServidor = {id_servidor} and pid = {pid}")
+            conexao_my.commit()        
+            
 

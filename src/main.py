@@ -34,6 +34,17 @@ def verificar_servidor_cadastrado():
 
     return servidor_cadastrado
 
+def encerrarProcessos(pids, id_servidor):
+    if os.name == "nt":
+        for pid in pids:
+            os.system('taskkill /PID ' + str(pid[0])+" /F")
+            database.deletarPids(id_servidor, pid[0])
+    else:
+        for pid in pids:
+            os.system('kill '+str(pid[0]))
+            database.deletarPids(id_servidor, pid[0])
+
+
 def login():
     resultado = False
     deseja_continuar = True
@@ -327,6 +338,8 @@ def lidar_coleta_dados():
                         (id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 12:
+                    pids = database.capturarPids(id_servidor)
+                    encerrarProcessos(pids, id_servidor)
                     useCpu = 0
                     memoryRam = 0
                     nomes = []
@@ -334,7 +347,7 @@ def lidar_coleta_dados():
                     situacaoRam = 'n'
                     i = 0
                     while i < 5:
-                        for proc in process_iter(['pid', 'name']):
+                        for proc in process_iter(['pid', 'name', 'username']):
                             if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
                                 useCpu = proc.cpu_percent()
                                 memoryRam = proc.memory_percent()
@@ -350,7 +363,7 @@ def lidar_coleta_dados():
                                         situacaoRam = 'e'
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
                                 
-                        i+=1     
+                        i+=1         
                                                           
                 elif metrica == 13:
                     # Conexões ativas TCP
@@ -396,7 +409,7 @@ def lidar_coleta_dados():
                     x = 0
                     i = 0
                     while i < 5:
-                        for proc in process_iter(['pid', 'name']):
+                        for proc in process_iter(['pid', 'name', 'username']):
                             if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
                                 for x in range(len(processos_desejaveis)):
                                     if(proc.name == processos_desejaveis[x]):
