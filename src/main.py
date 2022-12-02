@@ -1,4 +1,3 @@
-from concurrent.futures import process
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
@@ -9,6 +8,7 @@ from getpass import getpass
 from time import sleep
 import requests
 import datetime
+import pytz
 import database
 import notifier
 import requests
@@ -415,7 +415,7 @@ def lidar_coleta_dados():
                                     if(proc.name == processos_desejaveis[x]):
                                         print("oi") 
       
-            horario = datetime.datetime.now()
+            horario = datetime.datetime.now(pytz.utc)
 
             if ultimo_insert != None:
                 diferenca_segundos = abs((horario - ultimo_insert).seconds)
