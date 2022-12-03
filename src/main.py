@@ -2,7 +2,6 @@ import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
 import geocoder
-import chaves
 import getmac
 from getpass import getpass
 from time import sleep
