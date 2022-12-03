@@ -1,7 +1,6 @@
 import os
 from psutil import cpu_percent, cpu_count, cpu_freq, virtual_memory, disk_usage, disk_io_counters, process_iter, net_connections, CONN_LISTEN
 import platform
-import geocoder
 import getmac
 from getpass import getpass
 from time import sleep
@@ -113,18 +112,6 @@ def lidar_cadastrar_servidor():
     is_cadastro_finalizado = cadastrar_servidor()
 
     return is_cadastro_finalizado
-
-def pegarTemperaturaCidade():
-    API_KEY = chaves.API_KEY
-    cidade = geocoder.ip("me")
-    cidadeMid = str(cidade[0]).split(',')
-    cidade = cidadeMid[0].replace("[","")
-    link = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={API_KEY}&lang=pt_br"
-    requisicao = requests.get(link)
-    requisicao_dic = requisicao.json()
-    temperaturaCidade = round(requisicao_dic['main']['temp'] - 273.15,2)
-    print(temperaturaCidade)
-    return temperaturaCidade
 
 def pegarTemperaturaServidor():
     temperaturaCPU = 0
