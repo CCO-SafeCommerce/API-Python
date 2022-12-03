@@ -5,7 +5,7 @@ import bcrypt
 AMBIENTE = "producao"
 DATABASE = "safecommmerce"
 
-HOST_MYSQL = "localhost"
+HOST_MYSQL = "172.17.0.2"
 USER_MYSQL = "aluno"
 PASS_MYSQL = "sptech"
 
