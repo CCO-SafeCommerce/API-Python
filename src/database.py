@@ -132,7 +132,7 @@ def obter_dados_servidor(mac_add):
 
     return resultado
 
-def obter_processos_desejaveis():
+def obter_processos_desejaveis(id_servidor):
     processos_desejaveis = []
 
     if AMBIENTE == "producao":
