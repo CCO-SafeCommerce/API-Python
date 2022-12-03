@@ -6,7 +6,7 @@ AMBIENTE = "producao"
 DATABASE = "safecommmerce"
 
 HOST_MYSQL = "172.17.0.2"
-USER_MYSQL = "aluno"
+USER_MYSQL = "root"
 PASS_MYSQL = "sptech"
 
 HOST_MSSQL = "grupo0-1cco.database.windows.net"

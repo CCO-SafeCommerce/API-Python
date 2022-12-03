@@ -402,6 +402,7 @@ def lidar_coleta_dados():
                                         print("oi") 
       
             horario = datetime.datetime.now(pytz.utc)
+            horario = horario.replace(tzinfo=None)
 
             if ultimo_insert != None:
                 diferenca_segundos = abs((horario - ultimo_insert).seconds)
