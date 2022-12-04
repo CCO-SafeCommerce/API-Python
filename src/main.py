@@ -32,7 +32,8 @@ def verificar_servidor_cadastrado():
 
     return servidor_cadastrado
 
-def encerrarProcessos(pids, id_servidor):
+def encerrarProcessos(id_servidor):
+    pids = database.capturarPids(id_servidor)
     if os.name == "nt":
         for pid in pids:
             os.system('taskkill /PID ' + str(pid[0])+" /F")
@@ -324,8 +325,7 @@ def lidar_coleta_dados():
                         (id_servidor, metrica, valor_lido, situacao, componente))
 
                 elif metrica == 12:
-                    pids = database.capturarPids(id_servidor)
-                    encerrarProcessos(pids, id_servidor)
+                    encerrarProcessos(id_servidor)
                     useCpu = 0
                     memoryRam = 0
                     nomes = []
