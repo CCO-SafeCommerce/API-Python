@@ -46,7 +46,7 @@ def encerrarProcessos(id_servidor):
             database.deletarPids(id_servidor, pid[0])
     else:
         for pid in pids:
-            os.system('kill '+str(pid[0]))
+            os.system('sudo kill '+str(pid[0]))
             database.deletarPids(id_servidor, pid[0])
 
 
