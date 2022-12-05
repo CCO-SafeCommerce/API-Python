@@ -11,6 +11,12 @@ import database
 import notifier
 import requests
 
+data = '2022-12-04 12:48:46.9'
+data2 = '2022-12-04 14:48:46.9'
+horario = datetime.datetime.strptime(data, '%Y-%m-%d %X.%f')
+horario2 = datetime.datetime.strptime(data2, '%Y-%m-%d %X.%f')
+diferenca_hora = horario2-horario
+
 if os.name == 'nt':
     limpar = "cls"
 else:
@@ -326,6 +332,8 @@ def lidar_coleta_dados():
 
                 elif metrica == 12:
                     encerrarProcessos(id_servidor)
+                    desejaveis = database.obter_processos_desejaveis(id_servidor)
+                    pid = 0
                     useCpu = 0
                     memoryRam = 0
                     nomes = []
@@ -334,7 +342,7 @@ def lidar_coleta_dados():
                     i = 0
                     while i < 5:
                         for proc in process_iter(['pid', 'name', 'username']):
-                            if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False:
+                            if proc.pid != 0 and proc.name != 'Idle' and proc.name() != 'System' and nomes.__contains__(proc.name()) == False and proc.username != 'root':
                                 useCpu = proc.cpu_percent()
                                 memoryRam = proc.memory_percent()
                                 if useCpu > 0:
@@ -347,6 +355,16 @@ def lidar_coleta_dados():
                                         situacaoRam = 'a'
                                     elif memoryRam >= 85:
                                         situacaoRam = 'e'
+                                    
+                                    if proc.name() not in desejaveis:
+                                        pid = proc.pid()
+                                        ultima_leitura = database.obter_ultima_leitura(pid)
+                                        if (datetime.datetime.now()-ultima_leitura) >= diferenca_hora:
+                                            encerrarProcessos(id_servidor)
+                                        else:
+                                            mensagem = f"O processo {proc.name()} não consta na sua lista de  desejaveis, o processo sera para dentre duas horas."
+                                            notifier.enviar_mensagem_slack(mensagem)
+
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
                                 
                         i+=1         

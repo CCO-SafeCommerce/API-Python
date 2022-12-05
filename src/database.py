@@ -134,20 +134,24 @@ def obter_dados_servidor(mac_add):
 
 def obter_processos_desejaveis(id_servidor):
     processos_desejaveis = []
+    processos_desejaveis_t = []
 
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor};')
+                cursor_ms.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor} and permissao = 1;')
                 processos_desejaveis = cursor_ms.fetchall()
 
     if len(processos_desejaveis) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor};')
+                cursor_my.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor} and permissao = 1;')
                 processos_desejaveis = cursor_my.fetchall()
 
-    return processos_desejaveis
+    for x in range(len(processos_desejaveis)):
+        processos_desejaveis_t.append(processos_desejaveis[x][0])
+
+    return processos_desejaveis_t
     
 
 def obter_parametros_coleta(id_servidor):
@@ -156,13 +160,30 @@ def obter_parametros_coleta(id_servidor):
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor}')
+                cursor_ms.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor};')
                 parametros = cursor_ms.fetchall()
 
     if len(parametros) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor}')
+                cursor_my.execute(f'select fk_Metrica from Parametro where fk_Servidor = {id_servidor};')
+                parametros = cursor_my.fetchall()
+
+    return parametros
+
+def obter_ultima_leitura(pid):
+    parametros = []
+
+    if AMBIENTE == "producao":
+        with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
+            with conexao_ms.cursor() as cursor_ms:
+                cursor_ms.execute(f'select dataLeitura from Processo where pid = {pid} order by dataLeitura desc limit 1;')
+                parametros = cursor_ms.fetchall()
+
+    if len(parametros) == 0:
+        with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
+            with conexao_my.cursor() as cursor_my:
+                cursor_my.execute(f'select dataLeitura from Processo where pid = {pid} order by dataLeitura desc limit 1;')
                 parametros = cursor_my.fetchall()
 
     return parametros
