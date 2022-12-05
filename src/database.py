@@ -5,8 +5,8 @@ import bcrypt
 AMBIENTE = "producao"
 DATABASE = "safecommmerce"
 
-HOST_MYSQL = "172.17.0.2"
-USER_MYSQL = "root"
+HOST_MYSQL = "localhost"
+USER_MYSQL = "aluno"
 PASS_MYSQL = "sptech"
 
 HOST_MSSQL = "safecommmerce.database.windows.net"
@@ -139,13 +139,13 @@ def obter_processos_desejaveis(id_servidor):
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor} and permissao = 1;')
+                cursor_ms.execute(f'select nome from Permissao_Processo where fkServidor = {id_servidor} and permissao = 1;')
                 processos_desejaveis = cursor_ms.fetchall()
 
     if len(processos_desejaveis) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f'select nome from Permissao_Processo where fk_Servidor = {id_servidor} and permissao = 1;')
+                cursor_my.execute(f'select nome from Permissao_Processo where fkServidor = {id_servidor} and permissao = 1;')
                 processos_desejaveis = cursor_my.fetchall()
 
     for x in range(len(processos_desejaveis)):
@@ -177,7 +177,7 @@ def obter_ultima_leitura(pid):
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
-                cursor_ms.execute(f'select dataLeitura from Processo where pid = {pid} order by dataLeitura desc limit 1;')
+                cursor_ms.execute(f'select top(1) dataLeitura from Processo where pid = {pid} order by dataLeitura desc;')
                 parametros = cursor_ms.fetchall()
 
     if len(parametros) == 0:

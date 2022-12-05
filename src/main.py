@@ -357,14 +357,10 @@ def lidar_coleta_dados():
                                         situacaoRam = 'e'
                                     
                                     if proc.name() not in desejaveis:
-                                        pid = proc.pid()
+                                        pid = proc.pid
                                         ultima_leitura = database.obter_ultima_leitura(pid)
-                                        if (datetime.datetime.now()-ultima_leitura) >= diferenca_hora:
-                                            encerrarProcessos(id_servidor)
-                                        else:
-                                            mensagem = f"O processo {proc.name()} não consta na sua lista de  desejaveis, o processo sera para dentre duas horas."
-                                            notifier.enviar_mensagem_slack(mensagem)
-
+                                        #print(type(ultima_leitura))
+                                       
                                     processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
                                 
                         i+=1         
