@@ -9,7 +9,7 @@ HOST_MYSQL = "172.17.0.2"
 USER_MYSQL = "root"
 PASS_MYSQL = "sptech"
 
-HOST_MSSQL = "grupo0-1cco.database.windows.net"
+HOST_MSSQL = "safecommmerce.database.windows.net"
 USER_MSSQL = "grupo01cco"
 PASS_MSSQL = "1cco#grupo4"
 
