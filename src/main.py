@@ -333,6 +333,7 @@ def lidar_coleta_dados():
                 elif metrica == 12:
                     encerrarProcessos(id_servidor)
                     desejaveis = database.obter_processos_desejaveis(id_servidor)
+                    ultima_leitura = []
                     pid = 0
                     useCpu = 0
                     memoryRam = 0
@@ -355,13 +356,20 @@ def lidar_coleta_dados():
                                         situacaoRam = 'a'
                                     elif memoryRam >= 85:
                                         situacaoRam = 'e'
-                                    
+                                       
+                                    processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
+
                                     if proc.name() not in desejaveis:
                                         pid = proc.pid
                                         ultima_leitura = database.obter_ultima_leitura(pid)
-                                        #print(type(ultima_leitura))
-                                       
-                                    processos.append(( id_servidor, proc.pid, proc.name(), useCpu, situacaoCpu, memoryRam, situacaoRam))
+                                        ultima_leitura_formatada = ultima_leitura[0][0]
+                                        print(type(ultima_leitura))
+                                        print(len(ultima_leitura))
+                                        print(ultima_leitura[0][0])
+                                        if ultima_leitura_formatada >= diferenca_hora:
+                                            encerrarProcessos(proc.pid())
+
+                                    sleep(2)
                                 
                         i+=1         
                                                           

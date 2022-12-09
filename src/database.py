@@ -6,8 +6,8 @@ AMBIENTE = "producao"
 DATABASE = "safecommmerce"
 
 HOST_MYSQL = "localhost"
-USER_MYSQL = "aluno"
-PASS_MYSQL = "sptech"
+USER_MYSQL = "root"
+PASS_MYSQL = "laika1105"
 
 HOST_MSSQL = "safecommmerce.database.windows.net"
 USER_MSSQL = "grupo01cco"
@@ -172,21 +172,23 @@ def obter_parametros_coleta(id_servidor):
     return parametros
 
 def obter_ultima_leitura(pid):
-    parametros = []
+    data = []
 
     if AMBIENTE == "producao":
         with pymssql.connect(server=HOST_MSSQL, user=USER_MSSQL, password=PASS_MSSQL, database=DATABASE) as conexao_ms:
             with conexao_ms.cursor() as cursor_ms:
                 cursor_ms.execute(f'select top(1) dataLeitura from Processo where pid = {pid} order by dataLeitura desc;')
-                parametros = cursor_ms.fetchall()
+                data = cursor_ms.fetchall()
 
-    if len(parametros) == 0:
+    if len(data) == 0:
         with mysql.connector.connect(host=HOST_MYSQL, user=USER_MYSQL, password=PASS_MYSQL, database=DATABASE) as conexao_my:
             with conexao_my.cursor() as cursor_my:
-                cursor_my.execute(f'select dataLeitura from Processo where pid = {pid} order by dataLeitura desc limit 1;')
-                parametros = cursor_my.fetchall()
+                cursor_my.execute(f'SELECT dataLeitura FROM Processo WHERE pid = {pid} ORDER BY dataLeitura DESC LIMIT 1;')
+                data = cursor_my.fetchall()
 
-    return parametros
+    data_formatada = data
+
+    return data_formatada
 
 def obter_aplicacoes(id_servidor):
     aplicacoes = []
